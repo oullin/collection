@@ -4,7 +4,7 @@
 go get github.com/gocanto/collection
 ```
 
-**collection** is a Go library that brings fluent, chainable collection operations to slices and maps, powered by Go generics (1.24+). It is inspired by Laravel's Illuminate Collections but designed idiomatically for Go, leveraging `iter.Seq` for lazy evaluation and type safety throughout.
+**collection** is a Go port of Laravel's [Illuminate\Support\Collection](https://github.com/laravel/framework/tree/master/src/Illuminate/Collections). It preserves the same rich API surface -- `filter`, `map`, `reduce`, `flatMap`, `chunk`, `partition`, and many more -- while redesigning everything idiomatically for Go with generics (1.25+), `iter.Seq` for lazy evaluation, and full type safety.
 
 ---
 
@@ -64,7 +64,7 @@ See the full API reference: [kv.md](kv.md)
 go get github.com/gocanto/collection
 ```
 
-Requires **Go 1.24** or later.
+Requires **Go 1.25** or later.
 
 ### Basic Collection Usage
 
