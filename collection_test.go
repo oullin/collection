@@ -132,12 +132,12 @@ func TestSole(t *testing.T) {
 
 	_, err = c.Sole(func(item int, _ int) bool { return item > 1 })
 	if err == nil {
-		t.Error("expected MultipleItemsFoundException")
+		t.Error("expected MultipleItemsFoundError")
 	}
 
 	_, err = c.Sole(func(item int, _ int) bool { return item > 10 })
 	if err == nil {
-		t.Error("expected ItemNotFoundException")
+		t.Error("expected ItemNotFoundError")
 	}
 }
 

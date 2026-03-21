@@ -2,27 +2,25 @@ package collection
 
 import (
 	"fmt"
+	"iter"
 	"strings"
 	"time"
 )
 
 // LazyCollection provides lazy evaluation for collection operations.
 // Items are only computed when needed, making it memory-efficient for large datasets.
-// Equivalent to: Illuminate\Support\LazyCollection
 type LazyCollection[T any] struct {
-	source func(yield func(T) bool)
+	source iter.Seq[T]
 }
 
-// NewLazy creates a new LazyCollection from a generator function.
-// The generator receives a yield function; call yield for each item and
+// NewLazy creates a new LazyCollection from an iterator function.
+// The source receives a yield function; call yield for each item and
 // stop generating if yield returns false.
-// Equivalent to: new LazyCollection($source)
-func NewLazy[T any](source func(yield func(T) bool)) *LazyCollection[T] {
+func NewLazy[T any](source iter.Seq[T]) *LazyCollection[T] {
 	return &LazyCollection[T]{source: source}
 }
 
 // LazyFrom creates a LazyCollection from a slice.
-// Equivalent to: LazyCollection::make($items)
 func LazyFrom[T any](items []T) *LazyCollection[T] {
 	return NewLazy(func(yield func(T) bool) {
 		for _, item := range items {
@@ -34,13 +32,12 @@ func LazyFrom[T any](items []T) *LazyCollection[T] {
 }
 
 // LazyEmpty creates an empty LazyCollection.
-// Equivalent to: LazyCollection::empty()
 func LazyEmpty[T any]() *LazyCollection[T] {
 	return NewLazy[T](func(yield func(T) bool) {})
 }
 
-// LazyRange creates a lazy range of integers.
-// Equivalent to: LazyCollection::range($from, $to)
+// LazyRange creates a lazy collection of sequential integers from start to end (inclusive).
+// If from > to, the sequence counts downward.
 func LazyRange(from, to int) *LazyCollection[int] {
 	return NewLazy(func(yield func(int) bool) {
 		if from <= to {
@@ -59,8 +56,8 @@ func LazyRange(from, to int) *LazyCollection[int] {
 	})
 }
 
-// LazyTimes creates a lazy collection by invoking the callback N times.
-// Equivalent to: LazyCollection::times($number, $callback)
+// LazyTimes creates a lazy collection by invoking the callback n times.
+// The callback receives a 1-based index.
 func LazyTimes[T any](number int, callback func(int) T) *LazyCollection[T] {
 	return NewLazy(func(yield func(T) bool) {
 		for i := 1; i <= number; i++ {
@@ -71,8 +68,12 @@ func LazyTimes[T any](number int, callback func(int) T) *LazyCollection[T] {
 	})
 }
 
-// All eagerly evaluates the lazy collection and returns all items.
-// Equivalent to: $lazy->all()
+// Iter returns the underlying iterator for use with range loops.
+func (lc *LazyCollection[T]) Iter() iter.Seq[T] {
+	return lc.source
+}
+
+// All eagerly evaluates the lazy collection and returns all items as a slice.
 func (lc *LazyCollection[T]) All() []T {
 	result := make([]T, 0)
 	lc.source(func(item T) bool {
@@ -82,20 +83,17 @@ func (lc *LazyCollection[T]) All() []T {
 	return result
 }
 
-// Eager eagerly evaluates and returns a Collection.
-// Equivalent to: $lazy->eager()
+// Eager eagerly evaluates the lazy collection and returns a Collection.
 func (lc *LazyCollection[T]) Eager() *Collection[T] {
 	return Collect(lc.All())
 }
 
-// Collect converts the lazy collection to an eager collection.
-// Equivalent to: $lazy->collect()
+// Collect converts the lazy collection to an eager Collection.
 func (lc *LazyCollection[T]) Collect() *Collection[T] {
 	return lc.Eager()
 }
 
-// Count returns the total number of items (eagerly evaluates).
-// Equivalent to: $lazy->count()
+// Count returns the total number of items by eagerly evaluating the collection.
 func (lc *LazyCollection[T]) Count() int {
 	count := 0
 	lc.source(func(_ T) bool {
@@ -105,8 +103,7 @@ func (lc *LazyCollection[T]) Count() int {
 	return count
 }
 
-// IsEmpty determines if the lazy collection is empty.
-// Equivalent to: $lazy->isEmpty()
+// IsEmpty reports whether the lazy collection contains no items.
 func (lc *LazyCollection[T]) IsEmpty() bool {
 	empty := true
 	lc.source(func(_ T) bool {
@@ -116,26 +113,24 @@ func (lc *LazyCollection[T]) IsEmpty() bool {
 	return empty
 }
 
-// IsNotEmpty determines if the lazy collection is not empty.
-// Equivalent to: $lazy->isNotEmpty()
+// IsNotEmpty reports whether the lazy collection contains at least one item.
 func (lc *LazyCollection[T]) IsNotEmpty() bool {
 	return !lc.IsEmpty()
 }
 
-// ContainsOneItem determines if the lazy collection contains exactly one item.
-// Equivalent to: $lazy->containsOneItem()
+// ContainsOneItem reports whether the lazy collection contains exactly one item.
 func (lc *LazyCollection[T]) ContainsOneItem() bool {
 	return lc.Count() == 1
 }
 
-// ContainsManyItems determines if the lazy collection contains more than one item.
-// Equivalent to: $lazy->containsManyItems()
+// ContainsManyItems reports whether the lazy collection contains more than one item.
 func (lc *LazyCollection[T]) ContainsManyItems() bool {
 	return lc.Count() > 1
 }
 
-// First returns the first element matching the given predicate.
-// Equivalent to: $lazy->first($callback)
+// First returns the first element matching the optional predicate.
+// If no predicate is given, it returns the first element.
+// The second return value indicates whether a matching element was found.
 func (lc *LazyCollection[T]) First(predicates ...func(T, int) bool) (T, bool) {
 	var result T
 	found := false
@@ -161,19 +156,19 @@ func (lc *LazyCollection[T]) First(predicates ...func(T, int) bool) (T, bool) {
 	return result, found
 }
 
-// FirstOrFail returns the first element or an error.
-// Equivalent to: $lazy->firstOrFail()
+// FirstOrFail returns the first element matching the optional predicate,
+// or an ItemNotFoundError if no element is found.
 func (lc *LazyCollection[T]) FirstOrFail(predicates ...func(T, int) bool) (T, error) {
 	item, ok := lc.First(predicates...)
 	if !ok {
 		var zero T
-		return zero, &ItemNotFoundException{}
+		return zero, &ItemNotFoundError{}
 	}
 	return item, nil
 }
 
-// Last returns the last element matching the given predicate.
-// Equivalent to: $lazy->last($callback)
+// Last returns the last element matching the optional predicate.
+// The second return value indicates whether a matching element was found.
 func (lc *LazyCollection[T]) Last(predicates ...func(T, int) bool) (T, bool) {
 	var result T
 	found := false
@@ -198,14 +193,14 @@ func (lc *LazyCollection[T]) Last(predicates ...func(T, int) bool) (T, bool) {
 	return result, found
 }
 
-// Sole returns the only element matching the predicate.
-// Equivalent to: $lazy->sole($callback)
+// Sole returns the only element matching the optional predicate.
+// It returns an error if zero or more than one element matches.
 func (lc *LazyCollection[T]) Sole(predicates ...func(T, int) bool) (T, error) {
 	return lc.Eager().Sole(predicates...)
 }
 
-// Get returns the item at a given index.
-// Equivalent to: $lazy->get($key)
+// Get returns the item at the given zero-based index.
+// The second return value indicates whether the index exists.
 func (lc *LazyCollection[T]) Get(index int) (T, bool) {
 	var result T
 	found := false
@@ -222,8 +217,7 @@ func (lc *LazyCollection[T]) Get(index int) (T, bool) {
 	return result, found
 }
 
-// Contains determines if the lazy collection contains an item.
-// Equivalent to: $lazy->contains($callback)
+// Contains reports whether any item satisfies the predicate.
 func (lc *LazyCollection[T]) Contains(predicate func(T, int) bool) bool {
 	found := false
 	idx := 0
@@ -238,14 +232,18 @@ func (lc *LazyCollection[T]) Contains(predicate func(T, int) bool) bool {
 	return found
 }
 
-// DoesntContain determines if the lazy collection doesn't contain an item.
-// Equivalent to: $lazy->doesntContain($callback)
+// Some is an alias for Contains.
+func (lc *LazyCollection[T]) Some(predicate func(T, int) bool) bool {
+	return lc.Contains(predicate)
+}
+
+// DoesntContain reports whether no item satisfies the predicate.
 func (lc *LazyCollection[T]) DoesntContain(predicate func(T, int) bool) bool {
 	return !lc.Contains(predicate)
 }
 
-// Search searches the lazy collection for the given value.
-// Equivalent to: $lazy->search($value)
+// Search returns the index of the first item satisfying the predicate.
+// The second return value indicates whether a match was found.
 func (lc *LazyCollection[T]) Search(predicate func(T, int) bool) (int, bool) {
 	resultIdx := -1
 	found := false
@@ -262,8 +260,8 @@ func (lc *LazyCollection[T]) Search(predicate func(T, int) bool) (int, bool) {
 	return resultIdx, found
 }
 
-// Before returns the item before the first matching item.
-// Equivalent to: $lazy->before($value)
+// Before returns the item immediately before the first item matching the predicate.
+// The second return value indicates whether such an item exists.
 func (lc *LazyCollection[T]) Before(predicate func(T, int) bool) (T, bool) {
 	var prev T
 	hasPrev := false
@@ -286,8 +284,8 @@ func (lc *LazyCollection[T]) Before(predicate func(T, int) bool) (T, bool) {
 	return zero, false
 }
 
-// After returns the item after the first matching item.
-// Equivalent to: $lazy->after($value)
+// After returns the item immediately after the first item matching the predicate.
+// The second return value indicates whether such an item exists.
 func (lc *LazyCollection[T]) After(predicate func(T, int) bool) (T, bool) {
 	matched := false
 	var result T
@@ -308,8 +306,8 @@ func (lc *LazyCollection[T]) After(predicate func(T, int) bool) (T, bool) {
 	return result, found
 }
 
-// Each iterates over the items.
-// Equivalent to: $lazy->each($callback)
+// Each iterates over items, calling the callback for each one.
+// If the callback returns false, iteration stops early.
 func (lc *LazyCollection[T]) Each(callback func(T, int) bool) *LazyCollection[T] {
 	idx := 0
 	lc.source(func(item T) bool {
@@ -320,15 +318,13 @@ func (lc *LazyCollection[T]) Each(callback func(T, int) bool) *LazyCollection[T]
 	return lc
 }
 
-// Tap passes the lazy collection to the given callback.
-// Equivalent to: $lazy->tap($callback)
+// Tap passes the lazy collection to the given callback and returns it unchanged.
 func (lc *LazyCollection[T]) Tap(callback func(*LazyCollection[T])) *LazyCollection[T] {
 	callback(lc)
 	return lc
 }
 
-// Filter returns a new lazy collection with items passing the predicate.
-// Equivalent to: $lazy->filter($callback)
+// Filter returns a new lazy collection containing only items for which the callback returns true.
 func (lc *LazyCollection[T]) Filter(callback func(T, int) bool) *LazyCollection[T] {
 	return NewLazy(func(yield func(T) bool) {
 		idx := 0
@@ -344,16 +340,14 @@ func (lc *LazyCollection[T]) Filter(callback func(T, int) bool) *LazyCollection[
 	})
 }
 
-// Reject returns items that don't pass the predicate.
-// Equivalent to: $lazy->reject($callback)
+// Reject returns a new lazy collection excluding items for which the callback returns true.
 func (lc *LazyCollection[T]) Reject(callback func(T, int) bool) *LazyCollection[T] {
 	return lc.Filter(func(item T, index int) bool {
 		return !callback(item, index)
 	})
 }
 
-// LazyMap maps items lazily.
-// Equivalent to: $lazy->map($callback)
+// LazyMap transforms each item using the callback, returning a new lazy collection.
 func LazyMap[T any, R any](lc *LazyCollection[T], callback func(T, int) R) *LazyCollection[R] {
 	return NewLazy(func(yield func(R) bool) {
 		idx := 0
@@ -367,8 +361,7 @@ func LazyMap[T any, R any](lc *LazyCollection[T], callback func(T, int) R) *Lazy
 	})
 }
 
-// LazyFlatMap flat maps items lazily.
-// Equivalent to: $lazy->flatMap($callback)
+// LazyFlatMap transforms each item into a slice and flattens the results into a new lazy collection.
 func LazyFlatMap[T any, R any](lc *LazyCollection[T], callback func(T, int) []R) *LazyCollection[R] {
 	return NewLazy(func(yield func(R) bool) {
 		idx := 0
@@ -384,8 +377,8 @@ func LazyFlatMap[T any, R any](lc *LazyCollection[T], callback func(T, int) []R)
 	})
 }
 
-// Take returns the first N items lazily.
-// Equivalent to: $lazy->take($limit)
+// Take returns a new lazy collection with at most limit items.
+// A negative limit takes from the end (requires eager evaluation).
 func (lc *LazyCollection[T]) Take(limit int) *LazyCollection[T] {
 	if limit < 0 {
 		// For negative take, we need to eagerly evaluate
@@ -408,8 +401,7 @@ func (lc *LazyCollection[T]) Take(limit int) *LazyCollection[T] {
 	})
 }
 
-// TakeUntil returns items until the callback returns true.
-// Equivalent to: $lazy->takeUntil($callback)
+// TakeUntil returns items from the beginning until the callback returns true.
 func (lc *LazyCollection[T]) TakeUntil(callback func(T, int) bool) *LazyCollection[T] {
 	return NewLazy(func(yield func(T) bool) {
 		idx := 0
@@ -423,16 +415,14 @@ func (lc *LazyCollection[T]) TakeUntil(callback func(T, int) bool) *LazyCollecti
 	})
 }
 
-// TakeWhile returns items while the callback returns true.
-// Equivalent to: $lazy->takeWhile($callback)
+// TakeWhile returns items from the beginning while the callback returns true.
 func (lc *LazyCollection[T]) TakeWhile(callback func(T, int) bool) *LazyCollection[T] {
 	return lc.TakeUntil(func(item T, idx int) bool {
 		return !callback(item, idx)
 	})
 }
 
-// TakeUntilTimeout returns items until the given timeout.
-// Equivalent to: $lazy->takeUntilTimeout($timeout)
+// TakeUntilTimeout returns items until the given duration has elapsed.
 func (lc *LazyCollection[T]) TakeUntilTimeout(timeout time.Duration) *LazyCollection[T] {
 	return NewLazy(func(yield func(T) bool) {
 		deadline := time.Now().Add(timeout)
@@ -445,8 +435,7 @@ func (lc *LazyCollection[T]) TakeUntilTimeout(timeout time.Duration) *LazyCollec
 	})
 }
 
-// Skip skips the first N items.
-// Equivalent to: $lazy->skip($count)
+// Skip returns a new lazy collection that skips the first count items.
 func (lc *LazyCollection[T]) Skip(count int) *LazyCollection[T] {
 	return NewLazy(func(yield func(T) bool) {
 		skipped := 0
@@ -460,8 +449,7 @@ func (lc *LazyCollection[T]) Skip(count int) *LazyCollection[T] {
 	})
 }
 
-// SkipUntil skips items until the callback returns true.
-// Equivalent to: $lazy->skipUntil($callback)
+// SkipUntil skips items until the callback returns true, then yields the rest.
 func (lc *LazyCollection[T]) SkipUntil(callback func(T, int) bool) *LazyCollection[T] {
 	return NewLazy(func(yield func(T) bool) {
 		found := false
@@ -479,16 +467,14 @@ func (lc *LazyCollection[T]) SkipUntil(callback func(T, int) bool) *LazyCollecti
 	})
 }
 
-// SkipWhile skips items while the callback returns true.
-// Equivalent to: $lazy->skipWhile($callback)
+// SkipWhile skips items while the callback returns true, then yields the rest.
 func (lc *LazyCollection[T]) SkipWhile(callback func(T, int) bool) *LazyCollection[T] {
 	return lc.SkipUntil(func(item T, idx int) bool {
 		return !callback(item, idx)
 	})
 }
 
-// Slice extracts a lazy slice.
-// Equivalent to: $lazy->slice($offset, $length)
+// Slice returns a subset of the lazy collection starting at offset with an optional length.
 func (lc *LazyCollection[T]) Slice(offset int, lengths ...int) *LazyCollection[T] {
 	result := lc.Skip(offset)
 	if len(lengths) > 0 {
@@ -497,9 +483,7 @@ func (lc *LazyCollection[T]) Slice(offset int, lengths ...int) *LazyCollection[T
 	return result
 }
 
-// Chunk breaks the lazy collection into chunks and returns them eagerly as a slice of slices.
-// Note: Go does not allow recursive generic instantiation, so this returns [][]T directly.
-// Equivalent to: $lazy->chunk($size)
+// Chunk eagerly evaluates the lazy collection and splits items into groups of the given size.
 func (lc *LazyCollection[T]) Chunk(size int) [][]T {
 	var result [][]T
 	chunk := make([]T, 0, size)
@@ -517,8 +501,8 @@ func (lc *LazyCollection[T]) Chunk(size int) [][]T {
 	return result
 }
 
-// ChunkWhile breaks the lazy collection into chunks while the callback returns true.
-// Equivalent to: $lazy->chunkWhile($callback)
+// ChunkWhile splits the lazy collection into groups where consecutive items satisfy the callback.
+// A new chunk is started when the callback returns false.
 func (lc *LazyCollection[T]) ChunkWhile(callback func(T, int, []T) bool) [][]T {
 	var result [][]T
 	current := make([]T, 0)
@@ -539,8 +523,7 @@ func (lc *LazyCollection[T]) ChunkWhile(callback func(T, int, []T) bool) [][]T {
 	return result
 }
 
-// Nth returns every n-th element.
-// Equivalent to: $lazy->nth($step, $offset)
+// Nth returns every step-th element, starting from an optional offset.
 func (lc *LazyCollection[T]) Nth(step int, offsets ...int) *LazyCollection[T] {
 	offset := 0
 	if len(offsets) > 0 {
@@ -560,8 +543,7 @@ func (lc *LazyCollection[T]) Nth(step int, offsets ...int) *LazyCollection[T] {
 	})
 }
 
-// Concat appends items lazily.
-// Equivalent to: $lazy->concat($source)
+// Concat returns a new lazy collection with the given items appended.
 func (lc *LazyCollection[T]) Concat(items []T) *LazyCollection[T] {
 	return NewLazy(func(yield func(T) bool) {
 		lc.source(func(item T) bool {
@@ -575,8 +557,8 @@ func (lc *LazyCollection[T]) Concat(items []T) *LazyCollection[T] {
 	})
 }
 
-// Pad pads the lazy collection to the given length.
-// Equivalent to: $lazy->pad($size, $value)
+// Pad returns a new lazy collection padded to the given size with the specified value.
+// A negative size pads at the beginning; a positive size pads at the end.
 func (lc *LazyCollection[T]) Pad(size int, value T) *LazyCollection[T] {
 	return NewLazy(func(yield func(T) bool) {
 		count := 0
@@ -615,8 +597,7 @@ func (lc *LazyCollection[T]) Pad(size int, value T) *LazyCollection[T] {
 	})
 }
 
-// TapEach calls the given callback on each item without affecting the collection.
-// Equivalent to: $lazy->tapEach($callback)
+// TapEach returns a new lazy collection that calls the callback on each item as it passes through.
 func (lc *LazyCollection[T]) TapEach(callback func(T, int)) *LazyCollection[T] {
 	return NewLazy(func(yield func(T) bool) {
 		idx := 0
@@ -628,8 +609,7 @@ func (lc *LazyCollection[T]) TapEach(callback func(T, int)) *LazyCollection[T] {
 	})
 }
 
-// Throttle adds a delay between each item.
-// Equivalent to: $lazy->throttle($seconds)
+// Throttle returns a new lazy collection that inserts a delay between each yielded item.
 func (lc *LazyCollection[T]) Throttle(delay time.Duration) *LazyCollection[T] {
 	return NewLazy(func(yield func(T) bool) {
 		first := true
@@ -643,8 +623,8 @@ func (lc *LazyCollection[T]) Throttle(delay time.Duration) *LazyCollection[T] {
 	})
 }
 
-// Remember caches yielded items so they're not recomputed on subsequent iterations.
-// Equivalent to: $lazy->remember()
+// Remember returns a lazy collection that caches items on first iteration,
+// so subsequent iterations reuse the cached values.
 func (lc *LazyCollection[T]) Remember() *LazyCollection[T] {
 	var cache []T
 	cached := false
@@ -666,8 +646,7 @@ func (lc *LazyCollection[T]) Remember() *LazyCollection[T] {
 	})
 }
 
-// Every determines if all items pass the given test.
-// Equivalent to: $lazy->every($callback)
+// Every reports whether all items satisfy the callback.
 func (lc *LazyCollection[T]) Every(callback func(T, int) bool) bool {
 	result := true
 	idx := 0
@@ -682,15 +661,13 @@ func (lc *LazyCollection[T]) Every(callback func(T, int) bool) bool {
 	return result
 }
 
-// Has determines if a key exists.
-// Equivalent to: $lazy->has($key)
+// Has reports whether the given zero-based index exists in the collection.
 func (lc *LazyCollection[T]) Has(index int) bool {
 	_, ok := lc.Get(index)
 	return ok
 }
 
-// HasAny determines if any of the given keys exist.
-// Equivalent to: $lazy->hasAny($keys)
+// HasAny reports whether any of the given indices exist in the collection.
 func (lc *LazyCollection[T]) HasAny(indices ...int) bool {
 	for _, idx := range indices {
 		if lc.Has(idx) {
@@ -700,8 +677,33 @@ func (lc *LazyCollection[T]) HasAny(indices ...int) bool {
 	return false
 }
 
-// Implode joins elements lazily into a string.
-// Equivalent to: $lazy->implode($glue)
+// HasSole reports whether exactly one item matches the optional predicate.
+// If no predicate is given, it checks whether the collection has exactly one item.
+func (lc *LazyCollection[T]) HasSole(predicates ...func(T, int) bool) bool {
+	count := 0
+	idx := 0
+	if len(predicates) == 0 || predicates[0] == nil {
+		lc.source(func(_ T) bool {
+			count++
+			return count < 2
+		})
+	} else {
+		predicate := predicates[0]
+		lc.source(func(item T) bool {
+			if predicate(item, idx) {
+				count++
+				if count > 1 {
+					return false
+				}
+			}
+			idx++
+			return true
+		})
+	}
+	return count == 1
+}
+
+// Implode joins all items into a single string separated by the given glue.
 func (lc *LazyCollection[T]) Implode(glue string) string {
 	parts := make([]string, 0)
 	lc.source(func(item T) bool {
@@ -711,8 +713,8 @@ func (lc *LazyCollection[T]) Implode(glue string) string {
 	return strings.Join(parts, glue)
 }
 
-// Join is like Implode but with an optional final glue.
-// Equivalent to: $lazy->join($glue, $finalGlue)
+// Join joins all items into a string with the given separator.
+// An optional final separator can be provided for the last element.
 func (lc *LazyCollection[T]) Join(glue string, finalGlues ...string) string {
 	parts := make([]string, 0)
 	lc.source(func(item T) bool {
@@ -733,8 +735,7 @@ func (lc *LazyCollection[T]) Join(glue string, finalGlues ...string) string {
 	return strings.Join(parts, glue)
 }
 
-// When applies the callback if the given condition is true.
-// Equivalent to: $lazy->when($condition, $callback, $default)
+// When applies the callback if the condition is true; otherwise applies the optional default.
 func (lc *LazyCollection[T]) When(condition bool, callback func(*LazyCollection[T]) *LazyCollection[T], defaults ...func(*LazyCollection[T]) *LazyCollection[T]) *LazyCollection[T] {
 	if condition {
 		return callback(lc)
@@ -746,25 +747,22 @@ func (lc *LazyCollection[T]) When(condition bool, callback func(*LazyCollection[
 }
 
 // WhenEmpty applies the callback if the lazy collection is empty.
-// Equivalent to: $lazy->whenEmpty($callback, $default)
 func (lc *LazyCollection[T]) WhenEmpty(callback func(*LazyCollection[T]) *LazyCollection[T], defaults ...func(*LazyCollection[T]) *LazyCollection[T]) *LazyCollection[T] {
 	return lc.When(lc.IsEmpty(), callback, defaults...)
 }
 
 // WhenNotEmpty applies the callback if the lazy collection is not empty.
-// Equivalent to: $lazy->whenNotEmpty($callback, $default)
 func (lc *LazyCollection[T]) WhenNotEmpty(callback func(*LazyCollection[T]) *LazyCollection[T], defaults ...func(*LazyCollection[T]) *LazyCollection[T]) *LazyCollection[T] {
 	return lc.When(lc.IsNotEmpty(), callback, defaults...)
 }
 
 // Unless applies the callback unless the condition is true.
-// Equivalent to: $lazy->unless($condition, $callback, $default)
 func (lc *LazyCollection[T]) Unless(condition bool, callback func(*LazyCollection[T]) *LazyCollection[T], defaults ...func(*LazyCollection[T]) *LazyCollection[T]) *LazyCollection[T] {
 	return lc.When(!condition, callback, defaults...)
 }
 
-// LazyReduce reduces the lazy collection to a single value.
-// Equivalent to: $lazy->reduce($callback, $initial)
+// LazyReduce reduces the lazy collection to a single value by applying the callback
+// to an accumulator and each item in sequence.
 func LazyReduce[T any, R any](lc *LazyCollection[T], callback func(R, T, int) R, initial R) R {
 	result := initial
 	idx := 0
@@ -776,8 +774,7 @@ func LazyReduce[T any, R any](lc *LazyCollection[T], callback func(R, T, int) R,
 	return result
 }
 
-// LazyUnique returns unique items lazily.
-// Equivalent to: $lazy->unique($callback)
+// LazyUnique returns a lazy collection containing only unique items as determined by the key function.
 func LazyUnique[T any, K comparable](lc *LazyCollection[T], keyFunc func(T) K) *LazyCollection[T] {
 	return NewLazy(func(yield func(T) bool) {
 		seen := make(map[K]bool)
@@ -792,16 +789,15 @@ func LazyUnique[T any, K comparable](lc *LazyCollection[T], keyFunc func(T) K) *
 	})
 }
 
-// LazyPluck extracts values lazily.
-// Equivalent to: $lazy->pluck($value)
+// LazyPluck extracts a value from each item using the given function, returning a new lazy collection.
 func LazyPluck[T any, V any](lc *LazyCollection[T], valueFunc func(T) V) *LazyCollection[V] {
 	return LazyMap(lc, func(item T, _ int) V {
 		return valueFunc(item)
 	})
 }
 
-// LazyGroupBy groups items lazily (evaluates eagerly for grouping).
-// Equivalent to: $lazy->groupBy($groupBy)
+// LazyGroupBy groups items by the key returned by the given function.
+// This requires eager evaluation to build the groups.
 func LazyGroupBy[T any, K comparable](lc *LazyCollection[T], keyFunc func(T) K) map[K]*LazyCollection[T] {
 	groups := make(map[K][]T)
 	lc.source(func(item T) bool {
@@ -816,8 +812,8 @@ func LazyGroupBy[T any, K comparable](lc *LazyCollection[T], keyFunc func(T) K) 
 	return result
 }
 
-// LazyKeyBy keys items by the given function (evaluates eagerly).
-// Equivalent to: $lazy->keyBy($keyBy)
+// LazyKeyBy indexes items by the key returned by the given function.
+// Duplicate keys cause the later value to overwrite the earlier one.
 func LazyKeyBy[T any, K comparable](lc *LazyCollection[T], keyFunc func(T) K) map[K]T {
 	result := make(map[K]T)
 	lc.source(func(item T) bool {
@@ -827,8 +823,7 @@ func LazyKeyBy[T any, K comparable](lc *LazyCollection[T], keyFunc func(T) K) ma
 	return result
 }
 
-// LazyCountBy counts occurrences lazily.
-// Equivalent to: $lazy->countBy($callback)
+// LazyCountBy counts occurrences of each key returned by the given function.
 func LazyCountBy[T any, K comparable](lc *LazyCollection[T], keyFunc func(T) K) map[K]int {
 	result := make(map[K]int)
 	lc.source(func(item T) bool {
@@ -838,8 +833,8 @@ func LazyCountBy[T any, K comparable](lc *LazyCollection[T], keyFunc func(T) K) 
 	return result
 }
 
-// Dump prints the lazy collection items for debugging.
-// Equivalent to: $lazy->dump()
+// Dump prints the lazy collection items to stdout for debugging and returns a new
+// lazy collection backed by the evaluated items.
 func (lc *LazyCollection[T]) Dump() *LazyCollection[T] {
 	items := lc.All()
 	fmt.Printf("%v\n", items)

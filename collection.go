@@ -1,27 +1,25 @@
-// Package collection provides a fluent, convenient wrapper for working with slices of data.
-// It is a line-by-line port of Laravel's Illuminate\Support\Collection to Go,
-// using Go generics for type safety.
+// Package collection provides a fluent, generic wrapper for working with slices of data.
 package collection
 
 import (
 	"cmp"
 	"encoding/json"
 	"fmt"
+	"iter"
 	"math"
 	"math/rand/v2"
+	"os"
 	"slices"
 	"sort"
 	"strings"
 )
 
 // Collection wraps a slice and provides a fluent API for working with arrays of data.
-// This is a generic type parameterized by T.
 type Collection[T any] struct {
 	items []T
 }
 
 // New creates a new Collection from the given items.
-// Equivalent to: new Collection($items)
 func New[T any](items ...T) *Collection[T] {
 	if items == nil {
 		items = make([]T, 0)
@@ -30,7 +28,6 @@ func New[T any](items ...T) *Collection[T] {
 }
 
 // Collect creates a new Collection from a slice.
-// Equivalent to: collect($items)
 func Collect[T any](items []T) *Collection[T] {
 	if items == nil {
 		items = make([]T, 0)
@@ -39,13 +36,11 @@ func Collect[T any](items []T) *Collection[T] {
 }
 
 // Empty creates an empty Collection.
-// Equivalent to: Collection::empty()
 func Empty[T any]() *Collection[T] {
 	return &Collection[T]{items: make([]T, 0)}
 }
 
-// Wrap wraps the given value in a collection if it is not already a collection.
-// Equivalent to: Collection::wrap($value)
+// Wrap wraps the given value in a collection if it is not already one.
 func Wrap[T any](value any) *Collection[T] {
 	switch v := value.(type) {
 	case *Collection[T]:
@@ -60,8 +55,7 @@ func Wrap[T any](value any) *Collection[T] {
 	}
 }
 
-// Unwrap returns the underlying items from a Collection, or the value itself.
-// Equivalent to: Collection::unwrap($value)
+// Unwrap returns the underlying items from a Collection, or the value itself if it is a slice.
 func Unwrap[T any](value any) []T {
 	if c, ok := value.(*Collection[T]); ok {
 		return c.All()
@@ -73,7 +67,6 @@ func Unwrap[T any](value any) []T {
 }
 
 // Times creates a new collection by invoking the callback a given number of times.
-// Equivalent to: Collection::times($number, $callback)
 func Times[T any](number int, callback func(int) T) *Collection[T] {
 	if number < 1 {
 		return Empty[T]()
@@ -85,8 +78,7 @@ func Times[T any](number int, callback func(int) T) *Collection[T] {
 	return Collect(items)
 }
 
-// Range creates a collection of integers from $from to $to with optional step.
-// Equivalent to: Collection::range($from, $to)
+// Range creates a collection of consecutive integers from start to end (inclusive).
 func Range(from, to int) *Collection[int] {
 	if from > to {
 		items := make([]int, 0, from-to+1)
@@ -102,51 +94,44 @@ func Range(from, to int) *Collection[int] {
 	return Collect(items)
 }
 
-// All returns all items in the collection.
-// Equivalent to: $collection->all()
+// All returns all items in the collection as a slice.
 func (c *Collection[T]) All() []T {
 	return c.items
 }
 
 // Count returns the total number of items in the collection.
-// Equivalent to: $collection->count()
 func (c *Collection[T]) Count() int {
 	return len(c.items)
 }
 
-// IsEmpty determines if the collection is empty.
-// Equivalent to: $collection->isEmpty()
+// IsEmpty reports whether the collection contains no items.
 func (c *Collection[T]) IsEmpty() bool {
 	return len(c.items) == 0
 }
 
-// IsNotEmpty determines if the collection is not empty.
-// Equivalent to: $collection->isNotEmpty()
+// IsNotEmpty reports whether the collection contains at least one item.
 func (c *Collection[T]) IsNotEmpty() bool {
 	return len(c.items) > 0
 }
 
-// ContainsOneItem determines if the collection contains a single item.
-// Equivalent to: $collection->containsOneItem()
+// ContainsOneItem reports whether the collection contains exactly one item.
 func (c *Collection[T]) ContainsOneItem() bool {
 	return len(c.items) == 1
 }
 
-// ContainsManyItems determines if the collection contains more than one item.
-// Equivalent to: $collection->containsManyItems()
+// ContainsManyItems reports whether the collection contains more than one item.
 func (c *Collection[T]) ContainsManyItems() bool {
 	return len(c.items) > 1
 }
 
 // HasMany is an alias for ContainsManyItems.
-// Equivalent to: $collection->hasMany()
 func (c *Collection[T]) HasMany() bool {
 	return c.ContainsManyItems()
 }
 
-// First returns the first element matching the given predicate.
-// If no predicate is given, returns the first element.
-// Equivalent to: $collection->first($callback)
+// First returns the first element matching the optional predicate.
+// If no predicate is provided, the first element is returned.
+// The second return value indicates whether a match was found.
 func (c *Collection[T]) First(predicates ...func(T, int) bool) (T, bool) {
 	if len(c.items) == 0 {
 		var zero T
@@ -165,19 +150,20 @@ func (c *Collection[T]) First(predicates ...func(T, int) bool) (T, bool) {
 	return zero, false
 }
 
-// FirstOrFail returns the first element or an error if empty.
-// Equivalent to: $collection->firstOrFail()
+// FirstOrFail returns the first element matching the optional predicate,
+// or an ItemNotFoundError if no match is found.
 func (c *Collection[T]) FirstOrFail(predicates ...func(T, int) bool) (T, error) {
 	item, ok := c.First(predicates...)
 	if !ok {
 		var zero T
-		return zero, &ItemNotFoundException{}
+		return zero, &ItemNotFoundError{}
 	}
 	return item, nil
 }
 
-// Last returns the last element matching the given predicate.
-// Equivalent to: $collection->last($callback)
+// Last returns the last element matching the optional predicate.
+// If no predicate is provided, the last element is returned.
+// The second return value indicates whether a match was found.
 func (c *Collection[T]) Last(predicates ...func(T, int) bool) (T, bool) {
 	if len(c.items) == 0 {
 		var zero T
@@ -196,8 +182,9 @@ func (c *Collection[T]) Last(predicates ...func(T, int) bool) (T, bool) {
 	return zero, false
 }
 
-// Sole returns the only element matching the predicate, or an error if zero or multiple found.
-// Equivalent to: $collection->sole($callback)
+// Sole returns the only element matching the optional predicate.
+// It returns an ItemNotFoundError if no items match, or a MultipleItemsFoundError
+// if more than one item matches.
 func (c *Collection[T]) Sole(predicates ...func(T, int) bool) (T, error) {
 	var filtered *Collection[T]
 	if len(predicates) == 0 || predicates[0] == nil {
@@ -208,17 +195,29 @@ func (c *Collection[T]) Sole(predicates ...func(T, int) bool) (T, error) {
 
 	if filtered.Count() == 0 {
 		var zero T
-		return zero, &ItemNotFoundException{}
+		return zero, &ItemNotFoundError{}
 	}
 	if filtered.Count() > 1 {
 		var zero T
-		return zero, &MultipleItemsFoundException{Count: filtered.Count()}
+		return zero, &MultipleItemsFoundError{Count: filtered.Count()}
 	}
 	return filtered.items[0], nil
 }
 
-// Get returns the item at a given index.
-// Equivalent to: $collection->get($key, $default)
+// HasSole reports whether exactly one item matches the optional predicate.
+func (c *Collection[T]) HasSole(predicates ...func(T, int) bool) bool {
+	var filtered *Collection[T]
+	if len(predicates) == 0 || predicates[0] == nil {
+		filtered = c
+	} else {
+		filtered = c.Filter(predicates[0])
+	}
+	return filtered.Count() == 1
+}
+
+// Get returns the item at the given index.
+// Negative indices count from the end. The second return value indicates
+// whether the index was within bounds. An optional default may be provided.
 func (c *Collection[T]) Get(index int, defaults ...T) (T, bool) {
 	if index < 0 {
 		index = len(c.items) + index
@@ -233,8 +232,8 @@ func (c *Collection[T]) Get(index int, defaults ...T) (T, bool) {
 	return zero, false
 }
 
-// GetOrPut returns the item at the given index or inserts a default value.
-// Equivalent to: $collection->getOrPut($key, $value)
+// GetOrPut returns the item at the given index if it exists.
+// Otherwise it appends the value to the collection and returns it.
 func (c *Collection[T]) GetOrPut(index int, value T) T {
 	if index >= 0 && index < len(c.items) {
 		return c.items[index]
@@ -244,7 +243,6 @@ func (c *Collection[T]) GetOrPut(index int, value T) T {
 }
 
 // Put sets the item at the given index to the given value.
-// Equivalent to: $collection->put($key, $value)
 func (c *Collection[T]) Put(index int, value T) *Collection[T] {
 	if index >= 0 && index < len(c.items) {
 		c.items[index] = value
@@ -252,8 +250,8 @@ func (c *Collection[T]) Put(index int, value T) *Collection[T] {
 	return c
 }
 
-// Pull removes and returns an item from the collection by index.
-// Equivalent to: $collection->pull($key)
+// Pull removes and returns the item at the given index.
+// The second return value indicates whether the index was valid.
 func (c *Collection[T]) Pull(index int) (T, bool) {
 	if index < 0 || index >= len(c.items) {
 		var zero T
@@ -264,8 +262,7 @@ func (c *Collection[T]) Pull(index int) (T, bool) {
 	return item, true
 }
 
-// Contains determines if the collection contains an item matching the predicate.
-// Equivalent to: $collection->contains($callback)
+// Contains reports whether any item in the collection satisfies the predicate.
 func (c *Collection[T]) Contains(predicate func(T, int) bool) bool {
 	for i, item := range c.items {
 		if predicate(item, i) {
@@ -275,14 +272,18 @@ func (c *Collection[T]) Contains(predicate func(T, int) bool) bool {
 	return false
 }
 
-// DoesntContain determines if the collection doesn't contain an item matching the predicate.
-// Equivalent to: $collection->doesntContain($callback)
+// Some is an alias for Contains.
+func (c *Collection[T]) Some(predicate func(T, int) bool) bool {
+	return c.Contains(predicate)
+}
+
+// DoesntContain reports whether no item in the collection satisfies the predicate.
 func (c *Collection[T]) DoesntContain(predicate func(T, int) bool) bool {
 	return !c.Contains(predicate)
 }
 
-// Search searches the collection for the given value and returns its index.
-// Equivalent to: $collection->search($value)
+// Search returns the index of the first item satisfying the predicate.
+// The second return value indicates whether a match was found.
 func (c *Collection[T]) Search(predicate func(T, int) bool) (int, bool) {
 	for i, item := range c.items {
 		if predicate(item, i) {
@@ -292,8 +293,7 @@ func (c *Collection[T]) Search(predicate func(T, int) bool) (int, bool) {
 	return -1, false
 }
 
-// Before returns the item before the first item matching the predicate.
-// Equivalent to: $collection->before($value)
+// Before returns the item immediately before the first item matching the predicate.
 func (c *Collection[T]) Before(predicate func(T, int) bool) (T, bool) {
 	for i, item := range c.items {
 		if predicate(item, i) {
@@ -308,8 +308,7 @@ func (c *Collection[T]) Before(predicate func(T, int) bool) (T, bool) {
 	return zero, false
 }
 
-// After returns the item after the first item matching the predicate.
-// Equivalent to: $collection->after($value)
+// After returns the item immediately after the first item matching the predicate.
 func (c *Collection[T]) After(predicate func(T, int) bool) (T, bool) {
 	for i, item := range c.items {
 		if predicate(item, i) {
@@ -325,33 +324,29 @@ func (c *Collection[T]) After(predicate func(T, int) bool) (T, bool) {
 }
 
 // Push appends one or more items to the end of the collection.
-// Equivalent to: $collection->push(...$values)
 func (c *Collection[T]) Push(values ...T) *Collection[T] {
 	c.items = append(c.items, values...)
 	return c
 }
 
-// Add is an alias for Push with a single value.
-// Equivalent to: $collection->add($item)
+// Add appends a single item to the end of the collection.
 func (c *Collection[T]) Add(item T) *Collection[T] {
 	return c.Push(item)
 }
 
 // Prepend adds an item to the beginning of the collection.
-// Equivalent to: $collection->prepend($value)
 func (c *Collection[T]) Prepend(value T) *Collection[T] {
 	c.items = append([]T{value}, c.items...)
 	return c
 }
 
 // Unshift is an alias for Prepend.
-// Equivalent to: $collection->unshift($value)
 func (c *Collection[T]) Unshift(value T) *Collection[T] {
 	return c.Prepend(value)
 }
 
-// Pop removes and returns the last N items from the collection.
-// Equivalent to: $collection->pop($count)
+// Pop removes and returns the last item from the collection.
+// The second return value indicates whether the collection was non-empty.
 func (c *Collection[T]) Pop(counts ...int) (T, bool) {
 	if len(c.items) == 0 {
 		var zero T
@@ -367,8 +362,7 @@ func (c *Collection[T]) Pop(counts ...int) (T, bool) {
 	return item, true
 }
 
-// PopMany removes and returns the last N items from the collection.
-// Equivalent to: $collection->pop($count) where count > 1
+// PopMany removes and returns the last n items from the collection.
 func (c *Collection[T]) PopMany(count int) *Collection[T] {
 	if count >= len(c.items) {
 		popped := Collect(c.items)
@@ -382,7 +376,7 @@ func (c *Collection[T]) PopMany(count int) *Collection[T] {
 }
 
 // Shift removes and returns the first item from the collection.
-// Equivalent to: $collection->shift()
+// The second return value indicates whether the collection was non-empty.
 func (c *Collection[T]) Shift() (T, bool) {
 	if len(c.items) == 0 {
 		var zero T
@@ -393,8 +387,7 @@ func (c *Collection[T]) Shift() (T, bool) {
 	return item, true
 }
 
-// ShiftMany removes and returns the first N items from the collection.
-// Equivalent to: $collection->shift($count)
+// ShiftMany removes and returns the first n items from the collection.
 func (c *Collection[T]) ShiftMany(count int) *Collection[T] {
 	if count >= len(c.items) {
 		shifted := Collect(c.items)
@@ -406,9 +399,8 @@ func (c *Collection[T]) ShiftMany(count int) *Collection[T] {
 	return shifted
 }
 
-// Each iterates over the items in the collection and passes each item to a callback.
+// Each iterates over the items, passing each item and its index to the callback.
 // Return false from the callback to stop iterating.
-// Equivalent to: $collection->each($callback)
 func (c *Collection[T]) Each(callback func(T, int) bool) *Collection[T] {
 	for i, item := range c.items {
 		if !callback(item, i) {
@@ -418,34 +410,29 @@ func (c *Collection[T]) Each(callback func(T, int) bool) *Collection[T] {
 	return c
 }
 
-// EachSpread iterates over the collection's items, passing each nested item value into the given callback.
-// For Go, this operates the same as Each since we don't have PHP's spread operator.
-// Equivalent to: $collection->eachSpread($callback)
+// EachSpread iterates over the collection's items, passing each item value
+// into the given callback. In Go this operates the same as Each.
 func (c *Collection[T]) EachSpread(callback func(T, int) bool) *Collection[T] {
 	return c.Each(callback)
 }
 
-// Tap passes the collection to the given callback and returns the collection.
-// Equivalent to: $collection->tap($callback)
+// Tap passes the collection to the given callback and returns the collection unchanged.
 func (c *Collection[T]) Tap(callback func(*Collection[T])) *Collection[T] {
 	callback(c)
 	return c
 }
 
-// Pipe passes the collection to the given callback and returns the result.
-// Equivalent to: $collection->pipe($callback)
+// Pipe passes the collection to the given callback and returns the callback's result.
 func Pipe[T any, R any](c *Collection[T], callback func(*Collection[T]) R) R {
 	return callback(c)
 }
 
 // PipeInto passes the collection to the given constructor and returns the result.
-// Equivalent to: $collection->pipeInto($class)
 func PipeInto[T any, R any](c *Collection[T], constructor func(*Collection[T]) R) R {
 	return constructor(c)
 }
 
-// PipeThrough passes the collection through a series of callbacks and returns the result.
-// Equivalent to: $collection->pipeThrough($callbacks)
+// PipeThrough passes the collection through a series of callbacks, returning the final result.
 func PipeThrough[T any](c *Collection[T], callbacks ...func(*Collection[T]) *Collection[T]) *Collection[T] {
 	result := c
 	for _, cb := range callbacks {
@@ -454,8 +441,7 @@ func PipeThrough[T any](c *Collection[T], callbacks ...func(*Collection[T]) *Col
 	return result
 }
 
-// Filter returns all items that pass the given truth test.
-// Equivalent to: $collection->filter($callback)
+// Filter returns a new collection containing only items for which the callback returns true.
 func (c *Collection[T]) Filter(callback func(T, int) bool) *Collection[T] {
 	result := make([]T, 0)
 	for i, item := range c.items {
@@ -466,16 +452,14 @@ func (c *Collection[T]) Filter(callback func(T, int) bool) *Collection[T] {
 	return Collect(result)
 }
 
-// Reject returns all items that do not pass the given truth test.
-// Equivalent to: $collection->reject($callback)
+// Reject returns a new collection containing only items for which the callback returns false.
 func (c *Collection[T]) Reject(callback func(T, int) bool) *Collection[T] {
 	return c.Filter(func(item T, index int) bool {
 		return !callback(item, index)
 	})
 }
 
-// Map runs a map over each of the items and returns a new collection.
-// Equivalent to: $collection->map($callback)
+// Map applies the callback to each item and returns a new collection of results.
 func Map[T any, R any](c *Collection[T], callback func(T, int) R) *Collection[R] {
 	result := make([]R, len(c.items))
 	for i, item := range c.items {
@@ -484,8 +468,7 @@ func Map[T any, R any](c *Collection[T], callback func(T, int) R) *Collection[R]
 	return Collect(result)
 }
 
-// Transform transforms each item in the collection using the callback (mutates in place).
-// Equivalent to: $collection->transform($callback)
+// Transform applies the callback to each item in place, mutating the collection.
 func (c *Collection[T]) Transform(callback func(T, int) T) *Collection[T] {
 	for i, item := range c.items {
 		c.items[i] = callback(item, i)
@@ -493,8 +476,7 @@ func (c *Collection[T]) Transform(callback func(T, int) T) *Collection[T] {
 	return c
 }
 
-// FlatMap maps a collection and collapses the result.
-// Equivalent to: $collection->flatMap($callback)
+// FlatMap applies the callback to each item, flattening the resulting slices into a single collection.
 func FlatMap[T any, R any](c *Collection[T], callback func(T, int) []R) *Collection[R] {
 	result := make([]R, 0)
 	for i, item := range c.items {
@@ -503,8 +485,7 @@ func FlatMap[T any, R any](c *Collection[T], callback func(T, int) []R) *Collect
 	return Collect(result)
 }
 
-// MapInto maps items into a new type using a constructor function.
-// Equivalent to: $collection->mapInto($class)
+// MapInto applies the constructor to each item, returning a new collection of the mapped type.
 func MapInto[T any, R any](c *Collection[T], constructor func(T) R) *Collection[R] {
 	result := make([]R, len(c.items))
 	for i, item := range c.items {
@@ -513,8 +494,7 @@ func MapInto[T any, R any](c *Collection[T], constructor func(T) R) *Collection[
 	return Collect(result)
 }
 
-// Reduce reduces the collection to a single value.
-// Equivalent to: $collection->reduce($callback, $initial)
+// Reduce iterates over the collection and accumulates a single result using the callback.
 func Reduce[T any, R any](c *Collection[T], callback func(R, T, int) R, initial R) R {
 	result := initial
 	for i, item := range c.items {
@@ -523,18 +503,13 @@ func Reduce[T any, R any](c *Collection[T], callback func(R, T, int) R, initial 
 	return result
 }
 
-// Flatten flattens a multi-dimensional collection into a single dimension.
-// For Go this works with []any items.
-// Equivalent to: $collection->flatten()
+// Flatten returns a shallow copy of the collection.
+// For non-nested typed slices this returns the items as-is.
 func (c *Collection[T]) Flatten() *Collection[T] {
-	// In Go, we can't easily flatten generic types without reflection.
-	// This returns the collection as-is for non-nested types.
 	return Collect(append([]T{}, c.items...))
 }
 
-// Chunk breaks the collection into multiple, smaller slices of a given size.
-// Note: Returns [][]T instead of nested Collection due to Go generics constraints.
-// Equivalent to: $collection->chunk($size)
+// Chunk breaks the collection into multiple slices of the given size.
 func (c *Collection[T]) Chunk(size int) [][]T {
 	if size <= 0 {
 		return nil
@@ -552,8 +527,8 @@ func (c *Collection[T]) Chunk(size int) [][]T {
 	return chunks
 }
 
-// ChunkWhile breaks the collection into multiple groups while the given callback returns true.
-// Equivalent to: $collection->chunkWhile($callback)
+// ChunkWhile breaks the collection into groups as long as the callback returns true.
+// A new group is started each time the callback returns false.
 func (c *Collection[T]) ChunkWhile(callback func(T, int, []T) bool) [][]T {
 	if len(c.items) == 0 {
 		return nil
@@ -572,8 +547,7 @@ func (c *Collection[T]) ChunkWhile(callback func(T, int, []T) bool) [][]T {
 	return chunks
 }
 
-// Split breaks a collection into the given number of groups.
-// Equivalent to: $collection->split($numberOfGroups)
+// Split breaks the collection into the given number of groups.
 func (c *Collection[T]) Split(numberOfGroups int) [][]T {
 	if len(c.items) == 0 || numberOfGroups <= 0 {
 		return nil
@@ -596,15 +570,13 @@ func (c *Collection[T]) Split(numberOfGroups int) [][]T {
 	return groups
 }
 
-// SplitIn splits a collection into groups, filling non-terminal groups completely.
-// Equivalent to: $collection->splitIn($numberOfGroups)
+// SplitIn splits the collection into groups, filling non-terminal groups completely.
 func (c *Collection[T]) SplitIn(numberOfGroups int) [][]T {
 	size := int(math.Ceil(float64(len(c.items)) / float64(numberOfGroups)))
 	return c.Chunk(size)
 }
 
-// Sliding creates a sliding window view of the collection.
-// Equivalent to: $collection->sliding($size, $step)
+// Sliding returns a sliding window view of the collection with the given window size and step.
 func (c *Collection[T]) Sliding(size int, steps ...int) [][]T {
 	step := 1
 	if len(steps) > 0 {
@@ -622,8 +594,8 @@ func (c *Collection[T]) Sliding(size int, steps ...int) [][]T {
 	return chunks
 }
 
-// Slice extracts a slice of the collection.
-// Equivalent to: $collection->slice($offset, $length)
+// Slice extracts a portion of the collection starting at the given offset.
+// An optional length limits how many items are returned.
 func (c *Collection[T]) Slice(offset int, lengths ...int) *Collection[T] {
 	if offset < 0 {
 		offset = len(c.items) + offset
@@ -648,8 +620,8 @@ func (c *Collection[T]) Slice(offset int, lengths ...int) *Collection[T] {
 	return Collect(result)
 }
 
-// Splice removes and returns a slice of items starting at the specified index.
-// Equivalent to: $collection->splice($offset, $length, $replacement)
+// Splice removes and returns a slice of items starting at the given offset.
+// An optional length limits the number of items removed.
 func (c *Collection[T]) Splice(offset int, lengths ...int) *Collection[T] {
 	length := len(c.items) - offset
 	if len(lengths) > 0 {
@@ -674,8 +646,8 @@ func (c *Collection[T]) Splice(offset int, lengths ...int) *Collection[T] {
 	return Collect(removed)
 }
 
-// SpliceReplace removes a portion and replaces it with the given items.
-// Equivalent to: $collection->splice($offset, $length, $replacement)
+// SpliceReplace removes a portion at the given offset and replaces it with the provided items.
+// It returns the removed items.
 func (c *Collection[T]) SpliceReplace(offset, length int, replacement []T) *Collection[T] {
 	if offset < 0 {
 		offset = len(c.items) + offset
@@ -697,8 +669,8 @@ func (c *Collection[T]) SpliceReplace(offset, length int, replacement []T) *Coll
 	return Collect(removed)
 }
 
-// Take returns a new collection with the specified number of items.
-// Equivalent to: $collection->take($limit)
+// Take returns a new collection with the specified number of items from the front.
+// A negative limit takes from the end.
 func (c *Collection[T]) Take(limit int) *Collection[T] {
 	if limit < 0 {
 		return c.Slice(limit)
@@ -706,8 +678,7 @@ func (c *Collection[T]) Take(limit int) *Collection[T] {
 	return c.Slice(0, limit)
 }
 
-// TakeUntil returns items until the given callback returns true.
-// Equivalent to: $collection->takeUntil($callback)
+// TakeUntil returns items from the start until the callback returns true.
 func (c *Collection[T]) TakeUntil(callback func(T, int) bool) *Collection[T] {
 	result := make([]T, 0)
 	for i, item := range c.items {
@@ -719,22 +690,19 @@ func (c *Collection[T]) TakeUntil(callback func(T, int) bool) *Collection[T] {
 	return Collect(result)
 }
 
-// TakeWhile returns items while the given callback returns true.
-// Equivalent to: $collection->takeWhile($callback)
+// TakeWhile returns items from the start as long as the callback returns true.
 func (c *Collection[T]) TakeWhile(callback func(T, int) bool) *Collection[T] {
 	return c.TakeUntil(func(item T, index int) bool {
 		return !callback(item, index)
 	})
 }
 
-// Skip skips over the first N items.
-// Equivalent to: $collection->skip($count)
+// Skip returns a new collection with the first n items removed.
 func (c *Collection[T]) Skip(count int) *Collection[T] {
 	return c.Slice(count)
 }
 
-// SkipUntil skips items until the given callback returns true.
-// Equivalent to: $collection->skipUntil($callback)
+// SkipUntil skips items until the callback returns true, then returns the rest.
 func (c *Collection[T]) SkipUntil(callback func(T, int) bool) *Collection[T] {
 	result := make([]T, 0)
 	found := false
@@ -749,16 +717,14 @@ func (c *Collection[T]) SkipUntil(callback func(T, int) bool) *Collection[T] {
 	return Collect(result)
 }
 
-// SkipWhile skips items while the given callback returns true.
-// Equivalent to: $collection->skipWhile($callback)
+// SkipWhile skips items as long as the callback returns true, then returns the rest.
 func (c *Collection[T]) SkipWhile(callback func(T, int) bool) *Collection[T] {
 	return c.SkipUntil(func(item T, index int) bool {
 		return !callback(item, index)
 	})
 }
 
-// Nth creates a new collection consisting of every n-th element.
-// Equivalent to: $collection->nth($step, $offset)
+// Nth returns a new collection containing every n-th element, starting at an optional offset.
 func (c *Collection[T]) Nth(step int, offsets ...int) *Collection[T] {
 	offset := 0
 	if len(offsets) > 0 {
@@ -771,23 +737,29 @@ func (c *Collection[T]) Nth(step int, offsets ...int) *Collection[T] {
 	return Collect(result)
 }
 
-// ForPage "pages" the collection by returning a given number of items per page.
-// Equivalent to: $collection->forPage($page, $perPage)
+// ForPage returns a subset of items for the given page number and page size.
 func (c *Collection[T]) ForPage(page, perPage int) *Collection[T] {
 	offset := (page - 1) * perPage
 	return c.Slice(offset, perPage)
 }
 
-// Values resets the keys on the collection (returns a copy).
-// Equivalent to: $collection->values()
+// Values returns a new collection with re-indexed items (a shallow copy).
 func (c *Collection[T]) Values() *Collection[T] {
 	result := make([]T, len(c.items))
 	copy(result, c.items)
 	return Collect(result)
 }
 
-// Reverse reverses the order of items.
-// Equivalent to: $collection->reverse()
+// Keys returns a new Collection[int] containing the indices 0 through n-1.
+func (c *Collection[T]) Keys() *Collection[int] {
+	keys := make([]int, len(c.items))
+	for i := range c.items {
+		keys[i] = i
+	}
+	return Collect(keys)
+}
+
+// Reverse returns a new collection with items in reverse order.
 func (c *Collection[T]) Reverse() *Collection[T] {
 	result := make([]T, len(c.items))
 	for i, j := 0, len(c.items)-1; j >= 0; i, j = i+1, j-1 {
@@ -796,8 +768,7 @@ func (c *Collection[T]) Reverse() *Collection[T] {
 	return Collect(result)
 }
 
-// Shuffle randomly shuffles the items.
-// Equivalent to: $collection->shuffle()
+// Shuffle returns a new collection with items in random order.
 func (c *Collection[T]) Shuffle() *Collection[T] {
 	result := make([]T, len(c.items))
 	copy(result, c.items)
@@ -807,8 +778,7 @@ func (c *Collection[T]) Shuffle() *Collection[T] {
 	return Collect(result)
 }
 
-// Random returns a random item from the collection.
-// Equivalent to: $collection->random()
+// Random returns a new collection with the specified number of randomly selected items.
 func (c *Collection[T]) Random(counts ...int) *Collection[T] {
 	count := 1
 	if len(counts) > 0 {
@@ -821,8 +791,7 @@ func (c *Collection[T]) Random(counts ...int) *Collection[T] {
 	return Collect(shuffled.items[:count])
 }
 
-// Sort sorts the collection using the given comparison function.
-// Equivalent to: $collection->sort($callback)
+// Sort returns a new collection sorted using the provided comparison function.
 func (c *Collection[T]) Sort(less func(a, b T) bool) *Collection[T] {
 	result := make([]T, len(c.items))
 	copy(result, c.items)
@@ -832,8 +801,7 @@ func (c *Collection[T]) Sort(less func(a, b T) bool) *Collection[T] {
 	return Collect(result)
 }
 
-// SortBy sorts the collection by the given callback.
-// Equivalent to: $collection->sortBy($callback)
+// SortBy returns a new collection sorted in ascending order by the given key function.
 func SortBy[T any, K cmp.Ordered](c *Collection[T], keyFunc func(T) K) *Collection[T] {
 	result := make([]T, len(c.items))
 	copy(result, c.items)
@@ -843,8 +811,7 @@ func SortBy[T any, K cmp.Ordered](c *Collection[T], keyFunc func(T) K) *Collecti
 	return Collect(result)
 }
 
-// SortByDesc sorts the collection by the given callback in descending order.
-// Equivalent to: $collection->sortByDesc($callback)
+// SortByDesc returns a new collection sorted in descending order by the given key function.
 func SortByDesc[T any, K cmp.Ordered](c *Collection[T], keyFunc func(T) K) *Collection[T] {
 	result := make([]T, len(c.items))
 	copy(result, c.items)
@@ -854,16 +821,15 @@ func SortByDesc[T any, K cmp.Ordered](c *Collection[T], keyFunc func(T) K) *Coll
 	return Collect(result)
 }
 
-// SortDesc sorts the collection in descending order.
-// Equivalent to: $collection->sortDesc()
+// SortDesc returns a new collection sorted in descending order using the provided comparison function.
 func (c *Collection[T]) SortDesc(less func(a, b T) bool) *Collection[T] {
 	return c.Sort(func(a, b T) bool {
 		return less(b, a)
 	})
 }
 
-// Unique returns unique items using the given key function.
-// Equivalent to: $collection->unique($callback)
+// Unique returns a new collection containing only items with distinct keys
+// as determined by the given key function.
 func Unique[T any, K comparable](c *Collection[T], keyFunc func(T) K) *Collection[T] {
 	seen := make(map[K]bool)
 	result := make([]T, 0)
@@ -877,8 +843,8 @@ func Unique[T any, K comparable](c *Collection[T], keyFunc func(T) K) *Collectio
 	return Collect(result)
 }
 
-// Duplicates returns all duplicate items using the given key function.
-// Equivalent to: $collection->duplicates($callback)
+// Duplicates returns a new collection containing all duplicate items
+// as determined by the given key function.
 func Duplicates[T any, K comparable](c *Collection[T], keyFunc func(T) K) *Collection[T] {
 	seen := make(map[K]bool)
 	result := make([]T, 0)
@@ -893,8 +859,7 @@ func Duplicates[T any, K comparable](c *Collection[T], keyFunc func(T) K) *Colle
 	return Collect(result)
 }
 
-// Every determines if all items pass the given truth test.
-// Equivalent to: $collection->every($callback)
+// Every reports whether all items in the collection satisfy the given predicate.
 func (c *Collection[T]) Every(callback func(T, int) bool) bool {
 	for i, item := range c.items {
 		if !callback(item, i) {
@@ -904,8 +869,7 @@ func (c *Collection[T]) Every(callback func(T, int) bool) bool {
 	return true
 }
 
-// Partition separates items that pass the truth test from those that don't.
-// Equivalent to: $collection->partition($callback)
+// Partition splits the collection into two: items that pass the predicate and items that do not.
 func (c *Collection[T]) Partition(callback func(T, int) bool) (*Collection[T], *Collection[T]) {
 	pass := make([]T, 0)
 	fail := make([]T, 0)
@@ -919,8 +883,7 @@ func (c *Collection[T]) Partition(callback func(T, int) bool) (*Collection[T], *
 	return Collect(pass), Collect(fail)
 }
 
-// Concat appends the given items to the end of the collection.
-// Equivalent to: $collection->concat($source)
+// Concat returns a new collection with the given items appended.
 func (c *Collection[T]) Concat(items []T) *Collection[T] {
 	result := make([]T, len(c.items)+len(items))
 	copy(result, c.items)
@@ -928,14 +891,13 @@ func (c *Collection[T]) Concat(items []T) *Collection[T] {
 	return Collect(result)
 }
 
-// Merge merges the given items into the collection.
-// Equivalent to: $collection->merge($items)
+// Merge returns a new collection with the given items merged in (appended).
 func (c *Collection[T]) Merge(items []T) *Collection[T] {
 	return c.Concat(items)
 }
 
-// Pad pads the collection to the specified length with a value.
-// Equivalent to: $collection->pad($size, $value)
+// Pad pads the collection to the specified length with the given value.
+// A negative size pads on the left; a positive size pads on the right.
 func (c *Collection[T]) Pad(size int, value T) *Collection[T] {
 	absSize := size
 	if absSize < 0 {
@@ -963,8 +925,7 @@ func (c *Collection[T]) Pad(size int, value T) *Collection[T] {
 	return Collect(result)
 }
 
-// Multiply creates multiple copies of all items in the collection.
-// Equivalent to: $collection->multiply($multiplier)
+// Multiply returns a new collection with all items repeated the given number of times.
 func (c *Collection[T]) Multiply(multiplier int) *Collection[T] {
 	if multiplier <= 0 {
 		return Empty[T]()
@@ -976,9 +937,8 @@ func (c *Collection[T]) Multiply(multiplier int) *Collection[T] {
 	return Collect(result)
 }
 
-// Flip swaps keys and values. Only meaningful for Pair types.
-// Equivalent to: $collection->flip()
-// Note: For typed Go, this is better handled via Map.
+// Flip returns a new collection with the item order reversed.
+// For typed Go slices this reverses the element order.
 func (c *Collection[T]) Flip() *Collection[T] {
 	result := make([]T, len(c.items))
 	for i, j := 0, len(c.items)-1; j >= 0; i, j = i+1, j-1 {
@@ -987,8 +947,7 @@ func (c *Collection[T]) Flip() *Collection[T] {
 	return Collect(result)
 }
 
-// Forget removes an item from the collection by index.
-// Equivalent to: $collection->forget($key)
+// Forget removes an item from the collection by index, mutating the collection.
 func (c *Collection[T]) Forget(index int) *Collection[T] {
 	if index < 0 || index >= len(c.items) {
 		return c
@@ -997,8 +956,7 @@ func (c *Collection[T]) Forget(index int) *Collection[T] {
 	return c
 }
 
-// Implode joins elements into a string using fmt.Sprint.
-// Equivalent to: $collection->implode($glue)
+// Implode joins elements into a string using the given glue, converting each item via fmt.Sprint.
 func (c *Collection[T]) Implode(glue string) string {
 	parts := make([]string, len(c.items))
 	for i, item := range c.items {
@@ -1007,8 +965,8 @@ func (c *Collection[T]) Implode(glue string) string {
 	return strings.Join(parts, glue)
 }
 
-// Join is like Implode but with an optional final glue.
-// Equivalent to: $collection->join($glue, $finalGlue)
+// Join joins elements into a string using the given glue,
+// with an optional final separator between the last two items.
 func (c *Collection[T]) Join(glue string, finalGlues ...string) string {
 	if len(c.items) == 0 {
 		return ""
@@ -1029,8 +987,7 @@ func (c *Collection[T]) Join(glue string, finalGlues ...string) string {
 	return strings.Join(parts, glue)
 }
 
-// When applies the callback if the given condition is true.
-// Equivalent to: $collection->when($condition, $callback, $default)
+// When applies the callback if the condition is true; otherwise it applies the optional default callback.
 func (c *Collection[T]) When(condition bool, callback func(*Collection[T]) *Collection[T], defaults ...func(*Collection[T]) *Collection[T]) *Collection[T] {
 	if condition {
 		return callback(c)
@@ -1041,38 +998,32 @@ func (c *Collection[T]) When(condition bool, callback func(*Collection[T]) *Coll
 	return c
 }
 
-// WhenEmpty applies the callback if the collection is empty.
-// Equivalent to: $collection->whenEmpty($callback, $default)
+// WhenEmpty applies the callback when the collection is empty.
 func (c *Collection[T]) WhenEmpty(callback func(*Collection[T]) *Collection[T], defaults ...func(*Collection[T]) *Collection[T]) *Collection[T] {
 	return c.When(c.IsEmpty(), callback, defaults...)
 }
 
-// WhenNotEmpty applies the callback if the collection is not empty.
-// Equivalent to: $collection->whenNotEmpty($callback, $default)
+// WhenNotEmpty applies the callback when the collection is not empty.
 func (c *Collection[T]) WhenNotEmpty(callback func(*Collection[T]) *Collection[T], defaults ...func(*Collection[T]) *Collection[T]) *Collection[T] {
 	return c.When(c.IsNotEmpty(), callback, defaults...)
 }
 
-// Unless applies the callback unless the given condition is true.
-// Equivalent to: $collection->unless($condition, $callback, $default)
+// Unless applies the callback unless the condition is true.
 func (c *Collection[T]) Unless(condition bool, callback func(*Collection[T]) *Collection[T], defaults ...func(*Collection[T]) *Collection[T]) *Collection[T] {
 	return c.When(!condition, callback, defaults...)
 }
 
 // UnlessEmpty applies the callback unless the collection is empty.
-// Equivalent to: $collection->unlessEmpty($callback, $default)
 func (c *Collection[T]) UnlessEmpty(callback func(*Collection[T]) *Collection[T], defaults ...func(*Collection[T]) *Collection[T]) *Collection[T] {
 	return c.WhenNotEmpty(callback, defaults...)
 }
 
 // UnlessNotEmpty applies the callback unless the collection is not empty.
-// Equivalent to: $collection->unlessNotEmpty($callback, $default)
 func (c *Collection[T]) UnlessNotEmpty(callback func(*Collection[T]) *Collection[T], defaults ...func(*Collection[T]) *Collection[T]) *Collection[T] {
 	return c.WhenEmpty(callback, defaults...)
 }
 
-// Zip merges the collection with the given items.
-// Equivalent to: $collection->zip($items)
+// Zip merges the collection with each of the given slices element-by-element.
 func Zip[T any](c *Collection[T], others ...[]T) *Collection[[]T] {
 	maxLen := len(c.items)
 	for _, o := range others {
@@ -1102,8 +1053,7 @@ func Zip[T any](c *Collection[T], others ...[]T) *Collection[[]T] {
 	return Collect(result)
 }
 
-// CrossJoin cross joins the collection with the given items.
-// Equivalent to: $collection->crossJoin($lists)
+// CrossJoin returns the cross product of the collection with the given slices.
 func CrossJoin[T any](c *Collection[T], others ...[]T) *Collection[[]T] {
 	results := [][]T{{}}
 	allLists := append([][]T{c.items}, others...)
@@ -1122,8 +1072,8 @@ func CrossJoin[T any](c *Collection[T], others ...[]T) *Collection[[]T] {
 	return Collect(results)
 }
 
-// Combine creates a collection of Pair by combining keys from this collection with values from the given items.
-// Equivalent to: $collection->combine($values)
+// Combine pairs keys from this collection with values from the given slice,
+// returning a collection of Pair values.
 func Combine[K any, V any](keys *Collection[K], values []V) *Collection[Pair[K, V]] {
 	minLen := len(keys.items)
 	if len(values) < minLen {
@@ -1136,8 +1086,7 @@ func Combine[K any, V any](keys *Collection[K], values []V) *Collection[Pair[K, 
 	return Collect(result)
 }
 
-// Collapse collapses a collection of slices into a single, flat collection.
-// Equivalent to: $collection->collapse()
+// Collapse flattens a collection of slices into a single, flat collection.
 func Collapse[T any](c *Collection[[]T]) *Collection[T] {
 	result := make([]T, 0)
 	for _, items := range c.items {
@@ -1146,8 +1095,7 @@ func Collapse[T any](c *Collection[[]T]) *Collection[T] {
 	return Collect(result)
 }
 
-// Diff returns the items in the collection not present in the given items.
-// Equivalent to: $collection->diff($items)
+// Diff returns the items in the collection that are not present in the given slice.
 func Diff[T comparable](c *Collection[T], items []T) *Collection[T] {
 	lookup := make(map[T]bool, len(items))
 	for _, item := range items {
@@ -1162,8 +1110,7 @@ func Diff[T comparable](c *Collection[T], items []T) *Collection[T] {
 	return Collect(result)
 }
 
-// DiffUsing returns the items not present in the given items, using the callback.
-// Equivalent to: $collection->diffUsing($items, $callback)
+// DiffUsing returns items not present in the given slice, using a custom equality function.
 func (c *Collection[T]) DiffUsing(items []T, equals func(T, T) bool) *Collection[T] {
 	result := make([]T, 0)
 	for _, item := range c.items {
@@ -1181,8 +1128,7 @@ func (c *Collection[T]) DiffUsing(items []T, equals func(T, T) bool) *Collection
 	return Collect(result)
 }
 
-// Intersect returns the items present in both collections.
-// Equivalent to: $collection->intersect($items)
+// Intersect returns the items present in both the collection and the given slice.
 func Intersect[T comparable](c *Collection[T], items []T) *Collection[T] {
 	lookup := make(map[T]bool, len(items))
 	for _, item := range items {
@@ -1197,8 +1143,8 @@ func Intersect[T comparable](c *Collection[T], items []T) *Collection[T] {
 	return Collect(result)
 }
 
-// IntersectUsing returns the items present in both collections, using the callback.
-// Equivalent to: $collection->intersectUsing($items, $callback)
+// IntersectUsing returns items present in both the collection and the given slice,
+// using a custom equality function.
 func (c *Collection[T]) IntersectUsing(items []T, equals func(T, T) bool) *Collection[T] {
 	result := make([]T, 0)
 	for _, item := range c.items {
@@ -1212,28 +1158,24 @@ func (c *Collection[T]) IntersectUsing(items []T, equals func(T, T) bool) *Colle
 	return Collect(result)
 }
 
-// ToSlice returns the underlying slice.
-// Equivalent to: $collection->toArray()
+// ToSlice returns a copy of the underlying slice.
 func (c *Collection[T]) ToSlice() []T {
 	result := make([]T, len(c.items))
 	copy(result, c.items)
 	return result
 }
 
-// ToJSON serializes the collection to JSON.
-// Equivalent to: $collection->toJson()
+// ToJSON serializes the collection to JSON bytes.
 func (c *Collection[T]) ToJSON() ([]byte, error) {
 	return json.Marshal(c.items)
 }
 
-// ToPrettyJSON serializes the collection to indented JSON.
-// Equivalent to: $collection->toPrettyJson()
+// ToPrettyJSON serializes the collection to indented JSON bytes.
 func (c *Collection[T]) ToPrettyJSON() ([]byte, error) {
 	return json.MarshalIndent(c.items, "", "    ")
 }
 
 // String returns the JSON string representation of the collection.
-// Equivalent to: $collection->__toString()
 func (c *Collection[T]) String() string {
 	b, err := c.ToJSON()
 	if err != nil {
@@ -1243,7 +1185,6 @@ func (c *Collection[T]) String() string {
 }
 
 // MarshalJSON implements the json.Marshaler interface.
-// Equivalent to: $collection->jsonSerialize()
 func (c *Collection[T]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.items)
 }
@@ -1260,13 +1201,12 @@ func (c *Collection[T]) Copy() *Collection[T] {
 	return Collect(result)
 }
 
-// Len implements sort.Interface.
+// Len returns the number of items, implementing sort.Interface.
 func (c *Collection[T]) Len() int {
 	return len(c.items)
 }
 
-// TapEach calls the given callback on each item, returning the original collection.
-// Equivalent to: $collection->tapEach($callback)
+// TapEach calls the given callback on each item for side effects, returning the original collection.
 func (c *Collection[T]) TapEach(callback func(T, int)) *Collection[T] {
 	for i, item := range c.items {
 		callback(item, i)
@@ -1274,15 +1214,19 @@ func (c *Collection[T]) TapEach(callback func(T, int)) *Collection[T] {
 	return c
 }
 
-// Dump prints the collection items for debugging.
-// Equivalent to: $collection->dump()
+// Dump prints the collection items to stdout for debugging.
 func (c *Collection[T]) Dump() *Collection[T] {
 	fmt.Printf("%v\n", c.items)
 	return c
 }
 
-// Only returns a collection with items at the given indices.
-// Equivalent to: $collection->only($keys)
+// DD prints the collection items for debugging and terminates the program.
+func (c *Collection[T]) DD() {
+	c.Dump()
+	os.Exit(1)
+}
+
+// Only returns a new collection containing only items at the given indices.
 func (c *Collection[T]) Only(indices ...int) *Collection[T] {
 	result := make([]T, 0, len(indices))
 	for _, idx := range indices {
@@ -1293,8 +1237,7 @@ func (c *Collection[T]) Only(indices ...int) *Collection[T] {
 	return Collect(result)
 }
 
-// Except returns a collection without items at the given indices.
-// Equivalent to: $collection->except($keys)
+// Except returns a new collection excluding items at the given indices.
 func (c *Collection[T]) Except(indices ...int) *Collection[T] {
 	excludeSet := make(map[int]bool, len(indices))
 	for _, idx := range indices {
@@ -1309,8 +1252,8 @@ func (c *Collection[T]) Except(indices ...int) *Collection[T] {
 	return Collect(result)
 }
 
-// Has determines if a key exists in the collection.
-// Equivalent to: $collection->has($key)
+// Has reports whether the given index exists in the collection.
+// Negative indices count from the end.
 func (c *Collection[T]) Has(index int) bool {
 	if index < 0 {
 		index = len(c.items) + index
@@ -1318,8 +1261,7 @@ func (c *Collection[T]) Has(index int) bool {
 	return index >= 0 && index < len(c.items)
 }
 
-// HasAny determines if any of the given keys exist in the collection.
-// Equivalent to: $collection->hasAny($keys)
+// HasAny reports whether any of the given indices exist in the collection.
 func (c *Collection[T]) HasAny(indices ...int) bool {
 	for _, idx := range indices {
 		if c.Has(idx) {
@@ -1329,8 +1271,7 @@ func (c *Collection[T]) HasAny(indices ...int) bool {
 	return false
 }
 
-// Pluck extracts values from a collection using a key function.
-// Equivalent to: $collection->pluck($value)
+// Pluck extracts a value from each item using the given function, returning a new collection.
 func Pluck[T any, V any](c *Collection[T], valueFunc func(T) V) *Collection[V] {
 	result := make([]V, len(c.items))
 	for i, item := range c.items {
@@ -1339,8 +1280,7 @@ func Pluck[T any, V any](c *Collection[T], valueFunc func(T) V) *Collection[V] {
 	return Collect(result)
 }
 
-// GroupBy groups the collection's items by a given key.
-// Equivalent to: $collection->groupBy($groupBy)
+// GroupBy groups the collection's items by a key returned from the given function.
 func GroupBy[T any, K comparable](c *Collection[T], keyFunc func(T) K) map[K]*Collection[T] {
 	groups := make(map[K]*Collection[T])
 	for _, item := range c.items {
@@ -1353,8 +1293,7 @@ func GroupBy[T any, K comparable](c *Collection[T], keyFunc func(T) K) map[K]*Co
 	return groups
 }
 
-// KeyBy keys the collection by the given key.
-// Equivalent to: $collection->keyBy($keyBy)
+// KeyBy indexes the collection by a key returned from the given function.
 func KeyBy[T any, K comparable](c *Collection[T], keyFunc func(T) K) map[K]T {
 	result := make(map[K]T)
 	for _, item := range c.items {
@@ -1363,8 +1302,7 @@ func KeyBy[T any, K comparable](c *Collection[T], keyFunc func(T) K) map[K]T {
 	return result
 }
 
-// CountBy counts the occurrences of values in the collection.
-// Equivalent to: $collection->countBy($callback)
+// CountBy counts how many items produce each key from the given function.
 func CountBy[T any, K comparable](c *Collection[T], keyFunc func(T) K) map[K]int {
 	result := make(map[K]int)
 	for _, item := range c.items {
@@ -1373,8 +1311,7 @@ func CountBy[T any, K comparable](c *Collection[T], keyFunc func(T) K) map[K]int
 	return result
 }
 
-// MapToDictionary maps items to key-value pairs and groups them.
-// Equivalent to: $collection->mapToDictionary($callback)
+// MapToDictionary maps each item to a key-value pair and groups values by key.
 func MapToDictionary[T any, K comparable, V any](c *Collection[T], callback func(T) (K, V)) map[K][]V {
 	result := make(map[K][]V)
 	for _, item := range c.items {
@@ -1384,8 +1321,12 @@ func MapToDictionary[T any, K comparable, V any](c *Collection[T], callback func
 	return result
 }
 
-// MapWithKeys maps items to key-value pairs.
-// Equivalent to: $collection->mapWithKeys($callback)
+// MapToGroups is an alias for MapToDictionary.
+func MapToGroups[T any, K comparable, V any](c *Collection[T], callback func(T) (K, V)) map[K][]V {
+	return MapToDictionary(c, callback)
+}
+
+// MapWithKeys maps each item to a key-value pair, returning a map.
 func MapWithKeys[T any, K comparable, V any](c *Collection[T], callback func(T) (K, V)) map[K]V {
 	result := make(map[K]V)
 	for _, item := range c.items {
@@ -1395,36 +1336,111 @@ func MapWithKeys[T any, K comparable, V any](c *Collection[T], callback func(T) 
 	return result
 }
 
-// Where filters items by a callback.
-// Equivalent to: $collection->where($key, $operator, $value)
+// Where filters items using a predicate that receives only the item (no index).
 func (c *Collection[T]) Where(predicate func(T) bool) *Collection[T] {
 	return c.Filter(func(item T, _ int) bool {
 		return predicate(item)
 	})
 }
 
-// WhereNot filters items by a negative callback.
+// WhereNot filters items using a negative predicate that receives only the item (no index).
 func (c *Collection[T]) WhereNot(predicate func(T) bool) *Collection[T] {
 	return c.Filter(func(item T, _ int) bool {
 		return !predicate(item)
 	})
 }
 
-// Dot flattens a multi-dimensional collection using "dot" notation.
-// For Go with typed collections, this returns the collection as-is.
-// Equivalent to: $collection->dot()
+// WhereNull returns items whose extracted value equals the zero value.
+func WhereNull[T any, K comparable](c *Collection[T], keyFunc func(T) K) *Collection[T] {
+	var zero K
+	result := make([]T, 0)
+	for _, item := range c.items {
+		if keyFunc(item) == zero {
+			result = append(result, item)
+		}
+	}
+	return Collect(result)
+}
+
+// WhereNotNull returns items whose extracted value is not the zero value.
+func WhereNotNull[T any, K comparable](c *Collection[T], keyFunc func(T) K) *Collection[T] {
+	var zero K
+	result := make([]T, 0)
+	for _, item := range c.items {
+		if keyFunc(item) != zero {
+			result = append(result, item)
+		}
+	}
+	return Collect(result)
+}
+
+// WhereIn returns items whose extracted key value is in the given set.
+func WhereIn[T any, K comparable](c *Collection[T], keyFunc func(T) K, values []K) *Collection[T] {
+	set := make(map[K]bool, len(values))
+	for _, v := range values {
+		set[v] = true
+	}
+	result := make([]T, 0)
+	for _, item := range c.items {
+		if set[keyFunc(item)] {
+			result = append(result, item)
+		}
+	}
+	return Collect(result)
+}
+
+// WhereNotIn returns items whose extracted key value is not in the given set.
+func WhereNotIn[T any, K comparable](c *Collection[T], keyFunc func(T) K, values []K) *Collection[T] {
+	set := make(map[K]bool, len(values))
+	for _, v := range values {
+		set[v] = true
+	}
+	result := make([]T, 0)
+	for _, item := range c.items {
+		if !set[keyFunc(item)] {
+			result = append(result, item)
+		}
+	}
+	return Collect(result)
+}
+
+// WhereBetween returns items whose extracted key value is between min and max (inclusive).
+func WhereBetween[T any, K cmp.Ordered](c *Collection[T], keyFunc func(T) K, min, max K) *Collection[T] {
+	result := make([]T, 0)
+	for _, item := range c.items {
+		v := keyFunc(item)
+		if v >= min && v <= max {
+			result = append(result, item)
+		}
+	}
+	return Collect(result)
+}
+
+// WhereNotBetween returns items whose extracted key value is outside the range [min, max].
+func WhereNotBetween[T any, K cmp.Ordered](c *Collection[T], keyFunc func(T) K, min, max K) *Collection[T] {
+	result := make([]T, 0)
+	for _, item := range c.items {
+		v := keyFunc(item)
+		if v < min || v > max {
+			result = append(result, item)
+		}
+	}
+	return Collect(result)
+}
+
+// Dot returns a shallow copy of the collection.
+// For typed Go slices, no dot-notation expansion is possible.
 func (c *Collection[T]) Dot() *Collection[T] {
 	return c.Copy()
 }
 
-// Undot expands dotted keys. For Go, returns as-is.
-// Equivalent to: $collection->undot()
+// Undot returns a shallow copy of the collection.
+// For typed Go slices, no dot-notation expansion is possible.
 func (c *Collection[T]) Undot() *Collection[T] {
 	return c.Copy()
 }
 
-// Ensure asserts that all items pass the given truth test.
-// Equivalent to: $collection->ensure($type)
+// Ensure verifies that all items satisfy the given predicate, returning an error if any do not.
 func (c *Collection[T]) Ensure(predicate func(T) bool) error {
 	for _, item := range c.items {
 		if !predicate(item) {
@@ -1434,14 +1450,12 @@ func (c *Collection[T]) Ensure(predicate func(T) bool) error {
 	return nil
 }
 
-// ToBase returns the base Collection.
-// Equivalent to: $collection->toBase()
+// ToBase returns the collection itself.
 func (c *Collection[T]) ToBase() *Collection[T] {
 	return c
 }
 
-// Lazy returns a new LazyCollection from the items.
-// Equivalent to: $collection->lazy()
+// Lazy returns a new LazyCollection backed by the collection's items.
 func (c *Collection[T]) Lazy() *LazyCollection[T] {
 	items := c.items
 	return NewLazy(func(yield func(T) bool) {
@@ -1453,8 +1467,7 @@ func (c *Collection[T]) Lazy() *LazyCollection[T] {
 	})
 }
 
-// Median returns the median value.
-// Equivalent to: $collection->median()
+// Median returns the median value of a float64 collection.
 func Median(c *Collection[float64]) float64 {
 	if len(c.items) == 0 {
 		return 0
@@ -1469,16 +1482,14 @@ func Median(c *Collection[float64]) float64 {
 	return sorted[mid]
 }
 
-// MedianBy returns the median value using a key function.
-// Equivalent to: $collection->median($key)
+// MedianBy returns the median value extracted from each item by the given function.
 func MedianBy[T any](c *Collection[T], valueFunc func(T) float64) float64 {
 	return Median(Map(c, func(item T, _ int) float64 {
 		return valueFunc(item)
 	}))
 }
 
-// Mode returns the mode (most frequent) values.
-// Equivalent to: $collection->mode()
+// Mode returns the most frequently occurring values in the collection.
 func Mode[T comparable](c *Collection[T]) []T {
 	if len(c.items) == 0 {
 		return nil
@@ -1500,8 +1511,7 @@ func Mode[T comparable](c *Collection[T]) []T {
 	return result
 }
 
-// Sum returns the sum of all items.
-// Equivalent to: $collection->sum()
+// Sum returns the sum of all items in a numeric collection.
 func Sum[T Numeric](c *Collection[T]) T {
 	var total T
 	for _, item := range c.items {
@@ -1510,8 +1520,7 @@ func Sum[T Numeric](c *Collection[T]) T {
 	return total
 }
 
-// SumBy returns the sum of values extracted by a key function.
-// Equivalent to: $collection->sum($callback)
+// SumBy returns the sum of values extracted from each item by the given function.
 func SumBy[T any, N Numeric](c *Collection[T], valueFunc func(T) N) N {
 	var total N
 	for _, item := range c.items {
@@ -1520,8 +1529,7 @@ func SumBy[T any, N Numeric](c *Collection[T], valueFunc func(T) N) N {
 	return total
 }
 
-// Avg returns the average of all items.
-// Equivalent to: $collection->avg()
+// Avg returns the arithmetic mean of all items in a numeric collection.
 func Avg[T Numeric](c *Collection[T]) float64 {
 	if len(c.items) == 0 {
 		return 0
@@ -1529,8 +1537,7 @@ func Avg[T Numeric](c *Collection[T]) float64 {
 	return float64(Sum(c)) / float64(len(c.items))
 }
 
-// AvgBy returns the average of values using a key function.
-// Equivalent to: $collection->avg($callback)
+// AvgBy returns the arithmetic mean of values extracted from each item by the given function.
 func AvgBy[T any, N Numeric](c *Collection[T], valueFunc func(T) N) float64 {
 	if len(c.items) == 0 {
 		return 0
@@ -1539,13 +1546,12 @@ func AvgBy[T any, N Numeric](c *Collection[T], valueFunc func(T) N) float64 {
 }
 
 // Average is an alias for Avg.
-// Equivalent to: $collection->average()
 func Average[T Numeric](c *Collection[T]) float64 {
 	return Avg(c)
 }
 
-// Min returns the minimum value.
-// Equivalent to: $collection->min()
+// Min returns the minimum value in an ordered collection.
+// The second return value indicates whether the collection was non-empty.
 func Min[T cmp.Ordered](c *Collection[T]) (T, bool) {
 	if len(c.items) == 0 {
 		var zero T
@@ -1560,8 +1566,8 @@ func Min[T cmp.Ordered](c *Collection[T]) (T, bool) {
 	return result, true
 }
 
-// MinBy returns the minimum value using a key function.
-// Equivalent to: $collection->min($callback)
+// MinBy returns the item with the minimum key as determined by the given function.
+// The second return value indicates whether the collection was non-empty.
 func MinBy[T any, K cmp.Ordered](c *Collection[T], keyFunc func(T) K) (T, bool) {
 	if len(c.items) == 0 {
 		var zero T
@@ -1579,8 +1585,8 @@ func MinBy[T any, K cmp.Ordered](c *Collection[T], keyFunc func(T) K) (T, bool) 
 	return result, true
 }
 
-// Max returns the maximum value.
-// Equivalent to: $collection->max()
+// Max returns the maximum value in an ordered collection.
+// The second return value indicates whether the collection was non-empty.
 func Max[T cmp.Ordered](c *Collection[T]) (T, bool) {
 	if len(c.items) == 0 {
 		var zero T
@@ -1595,8 +1601,8 @@ func Max[T cmp.Ordered](c *Collection[T]) (T, bool) {
 	return result, true
 }
 
-// MaxBy returns the maximum value using a key function.
-// Equivalent to: $collection->max($callback)
+// MaxBy returns the item with the maximum key as determined by the given function.
+// The second return value indicates whether the collection was non-empty.
 func MaxBy[T any, K cmp.Ordered](c *Collection[T], keyFunc func(T) K) (T, bool) {
 	if len(c.items) == 0 {
 		var zero T
@@ -1612,4 +1618,26 @@ func MaxBy[T any, K cmp.Ordered](c *Collection[T], keyFunc func(T) K) (T, bool) 
 		}
 	}
 	return result, true
+}
+
+// Iter returns an iter.Seq[T] that yields each item in the collection.
+func (c *Collection[T]) Iter() iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for _, item := range c.items {
+			if !yield(item) {
+				return
+			}
+		}
+	}
+}
+
+// Iter2 returns an iter.Seq2[int, T] that yields each index-item pair in the collection.
+func (c *Collection[T]) Iter2() iter.Seq2[int, T] {
+	return func(yield func(int, T) bool) {
+		for i, item := range c.items {
+			if !yield(i, item) {
+				return
+			}
+		}
+	}
 }
