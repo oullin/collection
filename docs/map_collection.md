@@ -3,7 +3,7 @@
 `MapCollection` is an ordered map that preserves insertion order. Unlike Go's built-in `map`, iterating over a `MapCollection` always visits entries in the order they were added. It provides a fluent, chainable API for querying, filtering, transforming, and serializing key-value data.
 
 ```go
-import "github.com/gocanto/collection"
+import "github.com/gocanto/collection/collection"
 ```
 
 ---

@@ -1,9 +1,9 @@
 # Collection[T] API Reference
 
-`Collection[T]` is a generic wrapper around a Go slice that provides a fluent, chainable API for filtering, sorting, transforming, and aggregating data. It is the core type of the `github.com/gocanto/collection` package.
+`Collection[T]` is a generic wrapper around a Go slice that provides a fluent, chainable API for filtering, sorting, transforming, and aggregating data. It is the core type of the `github.com/gocanto/collection/collection` package.
 
 ```go
-import "github.com/gocanto/collection"
+import "github.com/gocanto/collection/collection"
 ```
 
 > **A note on top-level functions vs methods.** Go generics do not allow methods to introduce new type parameters. Functions like `Map`, `FlatMap`, `Reduce`, `SortBy`, `Unique`, `Duplicates`, `Pluck`, `GroupBy`, `KeyBy`, `CountBy`, `Zip`, `CrossJoin`, `Combine`, `Collapse`, `Diff`, `Intersect`, `Pipe`, `PipeInto`, `Sum`, `SumBy`, `Avg`, `AvgBy`, `Average`, `Min`, `MinBy`, `Max`, `MaxBy`, `Median`, `MedianBy`, `Mode`, `MapToDictionary`, `MapToGroups`, `MapWithKeys`, and `MapInto` are therefore package-level functions, not methods. Call them as `collection.Map(c, fn)`, not `c.Map(fn)`.

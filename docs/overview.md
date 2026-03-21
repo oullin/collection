@@ -25,16 +25,17 @@ Go's built-in slice and map operations are intentionally minimal. Common tasks l
 ```
 github.com/gocanto/collection
     |
-    |-- Collection[T]        Fluent wrapper around []T
-    |-- MapCollection[K,V]   Ordered map with fluent API
-    |-- LazyCollection[T]    Lazy sequences backed by iter.Seq[T]
-    |-- Pair[K,V]            Key-value pair type
-    |-- Numeric              Type constraint for numeric types
+    |-- collection/              Core collection package
+    |       Collection[T]        Fluent wrapper around []T
+    |       MapCollection[K,V]   Ordered map with fluent API
+    |       LazyCollection[T]    Lazy sequences backed by iter.Seq[T]
+    |       Pair[K,V]            Key-value pair type
+    |       Numeric              Type constraint for numeric types
     |
-    |-- arr/                 Standalone generic slice utilities
+    |-- arr/                     Standalone generic slice utilities
     |       Flatten, Sort, Where, Map, Pluck, Partition, ...
     |
-    |-- kv/                  Map utilities with dot-notation support
+    |-- kv/                      Map utilities with dot-notation support
             Get, Set, Has, Dot, Undot, Only, Query, ...
 ```
 
@@ -73,7 +74,7 @@ package main
 
 import (
     "fmt"
-    "github.com/gocanto/collection"
+    "github.com/gocanto/collection/collection"
 )
 
 func main() {

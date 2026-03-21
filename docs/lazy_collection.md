@@ -5,7 +5,7 @@
 Because operations like `Filter`, `Take`, and `Skip` return new lazy collections rather than materializing results, you can compose long pipelines that only process the elements actually needed. Memory usage stays proportional to what you consume, not to the total dataset size.
 
 ```go
-import "github.com/gocanto/collection"
+import "github.com/gocanto/collection/collection"
 ```
 
 ---

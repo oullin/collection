@@ -25,7 +25,7 @@ package main
 
 import (
     "fmt"
-    "github.com/gocanto/collection"
+    "github.com/gocanto/collection/collection"
 )
 
 func main() {
