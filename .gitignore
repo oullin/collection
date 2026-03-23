@@ -1,2 +1,5 @@
-# PHP source files (reference only, not part of the Go port)
-*.php
+.DS_Store
+
+bin/
+!bin/.gitkeep
+
