@@ -26,16 +26,22 @@ func First[T any](items []T, callbacks ...func(T, int) bool) (T, bool) {
 		if len(items) > 0 {
 			return items[0], true
 		}
+
 		var zero T
+
 		return zero, false
 	}
+
 	callback := callbacks[0]
+
 	for i, item := range items {
 		if callback(item, i) {
 			return item, true
 		}
 	}
+
 	var zero T
+
 	return zero, false
 }
 
@@ -47,16 +53,22 @@ func Last[T any](items []T, callbacks ...func(T, int) bool) (T, bool) {
 		if len(items) > 0 {
 			return items[len(items)-1], true
 		}
+
 		var zero T
+
 		return zero, false
 	}
+
 	callback := callbacks[0]
+
 	for i := len(items) - 1; i >= 0; i-- {
 		if callback(items[i], i) {
 			return items[i], true
 		}
 	}
+
 	var zero T
+
 	return zero, false
 }
 
@@ -65,53 +77,67 @@ func Last[T any](items []T, callbacks ...func(T, int) bool) (T, bool) {
 func Take[T any](items []T, limit int) []T {
 	if limit < 0 {
 		start := len(items) + limit
+
 		if start < 0 {
 			start = 0
 		}
+
 		result := make([]T, len(items)-start)
 		copy(result, items[start:])
+
 		return result
 	}
+
 	if limit > len(items) {
 		limit = len(items)
 	}
+
 	result := make([]T, limit)
 	copy(result, items[:limit])
+
 	return result
 }
 
 // Only returns the elements at the given indices.
 func Only[T any](items []T, indices []int) []T {
 	result := make([]T, 0, len(indices))
+
 	for _, idx := range indices {
 		if idx >= 0 && idx < len(items) {
 			result = append(result, items[idx])
 		}
 	}
+
 	return result
 }
 
 // Except returns all elements except those at the given indices.
 func Except[T any](items []T, indices []int) []T {
 	excludeSet := make(map[int]bool, len(indices))
+
 	for _, idx := range indices {
 		excludeSet[idx] = true
 	}
+
 	result := make([]T, 0)
+
 	for i, item := range items {
 		if !excludeSet[i] {
 			result = append(result, item)
 		}
 	}
+
 	return result
 }
 
 // Flatten flattens a slice of slices into a single slice.
 func Flatten[T any](items [][]T) []T {
 	result := make([]T, 0)
+
 	for _, inner := range items {
 		result = append(result, inner...)
 	}
+
 	return result
 }
 
@@ -149,6 +175,7 @@ func Shuffle[T any](items []T) []T {
 	rand.Shuffle(len(result), func(i, j int) {
 		result[i], result[j] = result[j], result[i]
 	})
+
 	return result
 }
 
@@ -156,13 +183,17 @@ func Shuffle[T any](items []T) []T {
 // If count is omitted it defaults to 1.
 func Random[T any](items []T, counts ...int) []T {
 	count := 1
+
 	if len(counts) > 0 {
 		count = counts[0]
 	}
+
 	shuffled := Shuffle(items)
+
 	if count >= len(shuffled) {
 		return shuffled
 	}
+
 	return shuffled[:count]
 }
 
@@ -174,6 +205,7 @@ func Sort[T any](items []T, less func(a, b T) bool) []T {
 	sort.SliceStable(result, func(i, j int) bool {
 		return less(result[i], result[j])
 	})
+
 	return result
 }
 
@@ -193,11 +225,13 @@ func SortRecursive[T any](items []T, less func(a, b T) bool) []T {
 // Where returns the elements for which the callback returns true.
 func Where[T any](items []T, callback func(T, int) bool) []T {
 	result := make([]T, 0)
+
 	for i, item := range items {
 		if callback(item, i) {
 			result = append(result, item)
 		}
 	}
+
 	return result
 }
 
@@ -205,11 +239,13 @@ func Where[T any](items []T, callback func(T, int) bool) []T {
 func WhereNotNull[T comparable](items []T) []T {
 	var zero T
 	result := make([]T, 0)
+
 	for _, item := range items {
 		if item != zero {
 			result = append(result, item)
 		}
 	}
+
 	return result
 }
 
@@ -225,6 +261,7 @@ func Reject[T any](items []T, callback func(T, int) bool) []T {
 func Partition[T any](items []T, callback func(T, int) bool) ([]T, []T) {
 	pass := make([]T, 0)
 	fail := make([]T, 0)
+
 	for i, item := range items {
 		if callback(item, i) {
 			pass = append(pass, item)
@@ -232,6 +269,7 @@ func Partition[T any](items []T, callback func(T, int) bool) ([]T, []T) {
 			fail = append(fail, item)
 		}
 	}
+
 	return pass, fail
 }
 
@@ -242,6 +280,7 @@ func Every[T any](items []T, callback func(T, int) bool) bool {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -252,6 +291,7 @@ func Some[T any](items []T, callback func(T, int) bool) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -267,6 +307,7 @@ func Has[T any](items []T, indices ...int) bool {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -277,6 +318,7 @@ func HasAny[T any](items []T, indices ...int) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -286,22 +328,28 @@ func Join(items []string, glue string, finalGlues ...string) string {
 	if len(items) == 0 {
 		return ""
 	}
+
 	if len(items) == 1 {
 		return items[0]
 	}
+
 	if len(finalGlues) > 0 && finalGlues[0] != "" {
 		last := items[len(items)-1]
 		rest := items[:len(items)-1]
+
 		return strings.Join(rest, glue) + finalGlues[0] + last
 	}
+
 	return strings.Join(items, glue)
 }
 
 // CrossJoin returns the Cartesian product of the given slices.
 func CrossJoin[T any](lists ...[]T) [][]T {
 	results := [][]T{{}}
+
 	for _, list := range lists {
 		var newResults [][]T
+
 		for _, result := range results {
 			for _, item := range list {
 				newResult := make([]T, len(result)+1)
@@ -310,8 +358,10 @@ func CrossJoin[T any](lists ...[]T) [][]T {
 				newResults = append(newResults, newResult)
 			}
 		}
+
 		results = newResults
 	}
+
 	return results
 }
 
@@ -319,19 +369,23 @@ func CrossJoin[T any](lists ...[]T) [][]T {
 func Divide[T any](items []T) ([]int, []T) {
 	keys := make([]int, len(items))
 	values := make([]T, len(items))
+
 	for i, item := range items {
 		keys[i] = i
 		values[i] = item
 	}
+
 	return keys, values
 }
 
 // Map applies a callback to each element and returns a slice of the results.
 func Map[T any, R any](items []T, callback func(T, int) R) []R {
 	result := make([]R, len(items))
+
 	for i, item := range items {
 		result[i] = callback(item, i)
 	}
+
 	return result
 }
 
@@ -339,10 +393,12 @@ func Map[T any, R any](items []T, callback func(T, int) R) []R {
 // that are collected into a map.
 func MapWithKeys[T any, K comparable, V any](items []T, callback func(T) (K, V)) map[K]V {
 	result := make(map[K]V)
+
 	for _, item := range items {
 		key, value := callback(item)
 		result[key] = value
 	}
+
 	return result
 }
 
@@ -355,9 +411,11 @@ func MapSpread[T any, R any](items []T, callback func(T, int) R) []R {
 // KeyBy indexes the slice elements by the key returned from keyFunc.
 func KeyBy[T any, K comparable](items []T, keyFunc func(T) K) map[K]T {
 	result := make(map[K]T)
+
 	for _, item := range items {
 		result[keyFunc(item)] = item
 	}
+
 	return result
 }
 
@@ -365,9 +423,11 @@ func KeyBy[T any, K comparable](items []T, keyFunc func(T) K) map[K]T {
 // the collected values as a slice.
 func Pluck[T any, V any](items []T, valueFunc func(T) V) []V {
 	result := make([]V, len(items))
+
 	for i, item := range items {
 		result[i] = valueFunc(item)
 	}
+
 	return result
 }
 
@@ -378,10 +438,13 @@ func Get[T any](items []T, index int, defaults ...T) T {
 	if index >= 0 && index < len(items) {
 		return items[index]
 	}
+
 	if len(defaults) > 0 {
 		return defaults[0]
 	}
+
 	var zero T
+
 	return zero
 }
 
@@ -391,11 +454,14 @@ func Set[T any](items []T, index int, value T) []T {
 	if index < 0 || index >= len(items) {
 		result := make([]T, len(items))
 		copy(result, items)
+
 		return result
 	}
+
 	result := make([]T, len(items))
 	copy(result, items)
 	result[index] = value
+
 	return result
 }
 
@@ -405,11 +471,14 @@ func Forget[T any](items []T, index int) []T {
 	if index < 0 || index >= len(items) {
 		result := make([]T, len(items))
 		copy(result, items)
+
 		return result
 	}
+
 	result := make([]T, 0, len(items)-1)
 	result = append(result, items[:index]...)
 	result = append(result, items[index+1:]...)
+
 	return result
 }
 
@@ -421,12 +490,15 @@ func Pull[T any](items []T, index int) (T, []T) {
 		var zero T
 		result := make([]T, len(items))
 		copy(result, items)
+
 		return zero, result
 	}
+
 	value := items[index]
 	result := make([]T, 0, len(items)-1)
 	result = append(result, items[:index]...)
 	result = append(result, items[index+1:]...)
+
 	return value, result
 }
 
@@ -437,30 +509,42 @@ func Sole[T any](items []T, callbacks ...func(T, int) bool) (T, error) {
 		if len(items) == 1 {
 			return items[0], nil
 		}
+
 		if len(items) == 0 {
 			var zero T
+
 			return zero, fmt.Errorf("no items found")
 		}
+
 		var zero T
+
 		return zero, fmt.Errorf("multiple items found: %d items", len(items))
 	}
+
 	callback := callbacks[0]
+
 	var result T
 	found := 0
+
 	for i, item := range items {
 		if callback(item, i) {
 			result = item
 			found++
+
 			if found > 1 {
 				var zero T
+
 				return zero, fmt.Errorf("multiple items found: %d+ items", found)
 			}
 		}
 	}
+
 	if found == 0 {
 		var zero T
+
 		return zero, fmt.Errorf("no items found")
 	}
+
 	return result, nil
 }
 

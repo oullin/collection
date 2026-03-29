@@ -17,23 +17,28 @@ func Get(target map[string]any, key string, defaults ...any) any {
 	}
 
 	segments := strings.Split(key, ".")
+
 	var current any = target
 
 	for _, segment := range segments {
 		switch v := current.(type) {
 		case map[string]any:
 			val, ok := v[segment]
+
 			if !ok {
 				if len(defaults) > 0 {
 					return defaults[0]
 				}
+
 				return nil
 			}
+
 			current = val
 		default:
 			if len(defaults) > 0 {
 				return defaults[0]
 			}
+
 			return nil
 		}
 	}
@@ -45,6 +50,7 @@ func Get(target map[string]any, key string, defaults ...any) any {
 // By default existing values are overwritten; pass false to preserve them.
 func Set(target map[string]any, key string, value any, overwrite ...bool) map[string]any {
 	shouldOverwrite := true
+
 	if len(overwrite) > 0 {
 		shouldOverwrite = overwrite[0]
 	}
@@ -65,6 +71,7 @@ func Set(target map[string]any, key string, value any, overwrite ...bool) map[st
 			if _, exists := current[segment]; !exists {
 				current[segment] = make(map[string]any)
 			}
+
 			if next, ok := current[segment].(map[string]any); ok {
 				current = next
 			} else {
@@ -85,15 +92,18 @@ func Has(target map[string]any, key string) bool {
 	}
 
 	segments := strings.Split(key, ".")
+
 	var current any = target
 
 	for _, segment := range segments {
 		switch v := current.(type) {
 		case map[string]any:
 			val, ok := v[segment]
+
 			if !ok {
 				return false
 			}
+
 			current = val
 		default:
 			return false
@@ -119,23 +129,30 @@ func Forget(target map[string]any, key string) map[string]any {
 
 	if len(segments) == 1 {
 		delete(target, key)
+
 		return target
 	}
 
 	current := target
+
 	for i := 0; i < len(segments)-1; i++ {
 		val, ok := current[segments[i]]
+
 		if !ok {
 			return target
 		}
+
 		next, ok := val.(map[string]any)
+
 		if !ok {
 			return target
 		}
+
 		current = next
 	}
 
 	delete(current, segments[len(segments)-1])
+
 	return target
 }
 
@@ -144,6 +161,7 @@ func ForgetMany(items map[string]any, keys ...string) map[string]any {
 	for _, key := range keys {
 		Forget(items, key)
 	}
+
 	return items
 }
 
@@ -152,6 +170,7 @@ func ForgetMany(items map[string]any, keys ...string) map[string]any {
 func Pull(items map[string]any, key string, defaults ...any) any {
 	value := Get(items, key, defaults...)
 	Forget(items, key)
+
 	return value
 }
 
@@ -162,6 +181,7 @@ func HasAll(items map[string]any, keys ...string) bool {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -172,6 +192,7 @@ func HasAny(items map[string]any, keys ...string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -181,20 +202,25 @@ func HasAny(items map[string]any, keys ...string) bool {
 // An optional prefix is prepended to each key.
 func Dot(items map[string]any, prepend ...string) map[string]any {
 	prefix := ""
+
 	if len(prepend) > 0 {
 		prefix = prepend[0]
 	}
+
 	result := make(map[string]any)
 	dotRecursive(items, prefix, result)
+
 	return result
 }
 
 func dotRecursive(items map[string]any, prefix string, result map[string]any) {
 	for key, value := range items {
 		fullKey := key
+
 		if prefix != "" {
 			fullKey = prefix + "." + key
 		}
+
 		if nested, ok := value.(map[string]any); ok {
 			dotRecursive(nested, fullKey, result)
 		} else {
@@ -206,9 +232,11 @@ func dotRecursive(items map[string]any, prefix string, result map[string]any) {
 // Undot expands a flat map with dot-notated keys into a nested map.
 func Undot(items map[string]any) map[string]any {
 	result := make(map[string]any)
+
 	for key, value := range items {
 		Set(result, key, value)
 	}
+
 	return result
 }
 
@@ -217,23 +245,28 @@ func Undot(items map[string]any) map[string]any {
 // Only returns a new map containing only the specified keys.
 func Only(items map[string]any, keys ...string) map[string]any {
 	result := make(map[string]any)
+
 	for _, key := range keys {
 		if v, ok := items[key]; ok {
 			result[key] = v
 		}
 	}
+
 	return result
 }
 
 // Except returns a new map with the specified keys removed.
 func Except(items map[string]any, keys ...string) map[string]any {
 	result := make(map[string]any, len(items))
+
 	for k, v := range items {
 		result[k] = v
 	}
+
 	for _, key := range keys {
 		delete(result, key)
 	}
+
 	return result
 }
 
@@ -247,9 +280,11 @@ func IsAssoc(items map[string]any) bool {
 // Query encodes the map as a URL query string.
 func Query(items map[string]any) string {
 	params := url.Values{}
+
 	for k, v := range items {
 		params.Set(k, fmt.Sprint(v))
 	}
+
 	return params.Encode()
 }
 
@@ -257,12 +292,15 @@ func Query(items map[string]any) string {
 // whose corresponding boolean values are true. Classes are sorted alphabetically.
 func ToCssClasses(classes map[string]bool) string {
 	result := make([]string, 0)
+
 	for class, condition := range classes {
 		if condition {
 			result = append(result, class)
 		}
 	}
+
 	sort.Strings(result)
+
 	return strings.Join(result, " ")
 }
 
@@ -271,15 +309,19 @@ func ToCssClasses(classes map[string]bool) string {
 // to each style if not already present. Styles are sorted alphabetically.
 func ToCssStyles(styles map[string]bool) string {
 	result := make([]string, 0)
+
 	for style, condition := range styles {
 		if condition {
 			if !strings.HasSuffix(style, ";") {
 				style += ";"
 			}
+
 			result = append(result, style)
 		}
 	}
+
 	sort.Strings(result)
+
 	return strings.Join(result, " ")
 }
 
@@ -290,14 +332,18 @@ func ToCssStyles(styles map[string]bool) string {
 // is sorted at construction time.
 func Sort(items map[string]any) map[string]any {
 	keys := make([]string, 0, len(items))
+
 	for k := range items {
 		keys = append(keys, k)
 	}
+
 	sort.Strings(keys)
 	result := make(map[string]any, len(items))
+
 	for _, k := range keys {
 		result[k] = items[k]
 	}
+
 	return result
 }
 
@@ -306,18 +352,23 @@ func Sort(items map[string]any) map[string]any {
 func SortRecursive(items map[string]any) map[string]any {
 	result := make(map[string]any, len(items))
 	keys := make([]string, 0, len(items))
+
 	for k := range items {
 		keys = append(keys, k)
 	}
+
 	sort.Strings(keys)
+
 	for _, k := range keys {
 		v := items[k]
+
 		if nested, ok := v.(map[string]any); ok {
 			result[k] = SortRecursive(nested)
 		} else {
 			result[k] = v
 		}
 	}
+
 	return result
 }
 
@@ -327,9 +378,11 @@ func SortRecursive(items map[string]any) map[string]any {
 // with the transformed values.
 func Map[V any, R any](items map[string]V, callback func(V, string) R) map[string]R {
 	result := make(map[string]R, len(items))
+
 	for k, v := range items {
 		result[k] = callback(v, k)
 	}
+
 	return result
 }
 
@@ -337,20 +390,24 @@ func Map[V any, R any](items map[string]V, callback func(V, string) R) map[strin
 // the callback returns true.
 func Where[V any](items map[string]V, callback func(V, string) bool) map[string]V {
 	result := make(map[string]V)
+
 	for k, v := range items {
 		if callback(v, k) {
 			result[k] = v
 		}
 	}
+
 	return result
 }
 
 // PrependKeysWith returns a new map with the given prefix prepended to every key.
 func PrependKeysWith[V any](items map[string]V, prefix string) map[string]V {
 	result := make(map[string]V, len(items))
+
 	for k, v := range items {
 		result[prefix+k] = v
 	}
+
 	return result
 }
 
@@ -358,13 +415,16 @@ func PrependKeysWith[V any](items map[string]V, prefix string) map[string]V {
 // any matching keys from the replacement maps.
 func Replace(items map[string]any, replacements ...map[string]any) map[string]any {
 	result := make(map[string]any, len(items))
+
 	for k, v := range items {
 		result[k] = v
 	}
+
 	for _, replacement := range replacements {
 		for k, v := range replacement {
 			result[k] = v
 		}
 	}
+
 	return result
 }

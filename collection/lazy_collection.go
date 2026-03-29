@@ -78,8 +78,10 @@ func (lc *LazyCollection[T]) All() []T {
 	result := make([]T, 0)
 	lc.source(func(item T) bool {
 		result = append(result, item)
+
 		return true
 	})
+
 	return result
 }
 
@@ -98,8 +100,10 @@ func (lc *LazyCollection[T]) Count() int {
 	count := 0
 	lc.source(func(_ T) bool {
 		count++
+
 		return true
 	})
+
 	return count
 }
 
@@ -108,8 +112,10 @@ func (lc *LazyCollection[T]) IsEmpty() bool {
 	empty := true
 	lc.source(func(_ T) bool {
 		empty = false
+
 		return false
 	})
+
 	return empty
 }
 
@@ -135,10 +141,12 @@ func (lc *LazyCollection[T]) First(predicates ...func(T, int) bool) (T, bool) {
 	var result T
 	found := false
 	idx := 0
+
 	if len(predicates) == 0 || predicates[0] == nil {
 		lc.source(func(item T) bool {
 			result = item
 			found = true
+
 			return false
 		})
 	} else {
@@ -147,12 +155,16 @@ func (lc *LazyCollection[T]) First(predicates ...func(T, int) bool) (T, bool) {
 			if predicate(item, idx) {
 				result = item
 				found = true
+
 				return false
 			}
+
 			idx++
+
 			return true
 		})
 	}
+
 	return result, found
 }
 
@@ -160,10 +172,13 @@ func (lc *LazyCollection[T]) First(predicates ...func(T, int) bool) (T, bool) {
 // or an ItemNotFoundError if no element is found.
 func (lc *LazyCollection[T]) FirstOrFail(predicates ...func(T, int) bool) (T, error) {
 	item, ok := lc.First(predicates...)
+
 	if !ok {
 		var zero T
+
 		return zero, &ItemNotFoundError{}
 	}
+
 	return item, nil
 }
 
@@ -173,10 +188,12 @@ func (lc *LazyCollection[T]) Last(predicates ...func(T, int) bool) (T, bool) {
 	var result T
 	found := false
 	idx := 0
+
 	if len(predicates) == 0 || predicates[0] == nil {
 		lc.source(func(item T) bool {
 			result = item
 			found = true
+
 			return true
 		})
 	} else {
@@ -186,10 +203,13 @@ func (lc *LazyCollection[T]) Last(predicates ...func(T, int) bool) (T, bool) {
 				result = item
 				found = true
 			}
+
 			idx++
+
 			return true
 		})
 	}
+
 	return result, found
 }
 
@@ -209,11 +229,15 @@ func (lc *LazyCollection[T]) Get(index int) (T, bool) {
 		if idx == index {
 			result = item
 			found = true
+
 			return false
 		}
+
 		idx++
+
 		return true
 	})
+
 	return result, found
 }
 
@@ -224,11 +248,15 @@ func (lc *LazyCollection[T]) Contains(predicate func(T, int) bool) bool {
 	lc.source(func(item T) bool {
 		if predicate(item, idx) {
 			found = true
+
 			return false
 		}
+
 		idx++
+
 		return true
 	})
+
 	return found
 }
 
@@ -252,11 +280,15 @@ func (lc *LazyCollection[T]) Search(predicate func(T, int) bool) (int, bool) {
 		if predicate(item, idx) {
 			resultIdx = idx
 			found = true
+
 			return false
 		}
+
 		idx++
+
 		return true
 	})
+
 	return resultIdx, found
 }
 
@@ -270,17 +302,23 @@ func (lc *LazyCollection[T]) Before(predicate func(T, int) bool) (T, bool) {
 	lc.source(func(item T) bool {
 		if predicate(item, idx) {
 			found = true
+
 			return false
 		}
+
 		prev = item
 		hasPrev = true
 		idx++
+
 		return true
 	})
+
 	if found && hasPrev {
 		return prev, true
 	}
+
 	var zero T
+
 	return zero, false
 }
 
@@ -288,6 +326,7 @@ func (lc *LazyCollection[T]) Before(predicate func(T, int) bool) (T, bool) {
 // The second return value indicates whether such an item exists.
 func (lc *LazyCollection[T]) After(predicate func(T, int) bool) (T, bool) {
 	matched := false
+
 	var result T
 	found := false
 	idx := 0
@@ -295,14 +334,19 @@ func (lc *LazyCollection[T]) After(predicate func(T, int) bool) (T, bool) {
 		if matched {
 			result = item
 			found = true
+
 			return false
 		}
+
 		if predicate(item, idx) {
 			matched = true
 		}
+
 		idx++
+
 		return true
 	})
+
 	return result, found
 }
 
@@ -313,14 +357,17 @@ func (lc *LazyCollection[T]) Each(callback func(T, int) bool) *LazyCollection[T]
 	lc.source(func(item T) bool {
 		cont := callback(item, idx)
 		idx++
+
 		return cont
 	})
+
 	return lc
 }
 
 // Tap passes the lazy collection to the given callback and returns it unchanged.
 func (lc *LazyCollection[T]) Tap(callback func(*LazyCollection[T])) *LazyCollection[T] {
 	callback(lc)
+
 	return lc
 }
 
@@ -334,7 +381,9 @@ func (lc *LazyCollection[T]) Filter(callback func(T, int) bool) *LazyCollection[
 					return false
 				}
 			}
+
 			idx++
+
 			return true
 		})
 	})
@@ -355,7 +404,9 @@ func LazyMap[T any, R any](lc *LazyCollection[T], callback func(T, int) R) *Lazy
 			if !yield(callback(item, idx)) {
 				return false
 			}
+
 			idx++
+
 			return true
 		})
 	})
@@ -371,7 +422,9 @@ func LazyFlatMap[T any, R any](lc *LazyCollection[T], callback func(T, int) []R)
 					return false
 				}
 			}
+
 			idx++
+
 			return true
 		})
 	})
@@ -384,18 +437,23 @@ func (lc *LazyCollection[T]) Take(limit int) *LazyCollection[T] {
 		// For negative take, we need to eagerly evaluate
 		items := lc.All()
 		start := len(items) + limit
+
 		if start < 0 {
 			start = 0
 		}
+
 		return LazyFrom(items[start:])
 	}
+
 	return NewLazy(func(yield func(T) bool) {
 		count := 0
 		lc.source(func(item T) bool {
 			if count >= limit {
 				return false
 			}
+
 			count++
+
 			return yield(item)
 		})
 	})
@@ -409,7 +467,9 @@ func (lc *LazyCollection[T]) TakeUntil(callback func(T, int) bool) *LazyCollecti
 			if callback(item, idx) {
 				return false
 			}
+
 			idx++
+
 			return yield(item)
 		})
 	})
@@ -430,6 +490,7 @@ func (lc *LazyCollection[T]) TakeUntilTimeout(timeout time.Duration) *LazyCollec
 			if time.Now().After(deadline) {
 				return false
 			}
+
 			return yield(item)
 		})
 	})
@@ -442,8 +503,10 @@ func (lc *LazyCollection[T]) Skip(count int) *LazyCollection[T] {
 		lc.source(func(item T) bool {
 			if skipped < count {
 				skipped++
+
 				return true
 			}
+
 			return yield(item)
 		})
 	})
@@ -458,10 +521,13 @@ func (lc *LazyCollection[T]) SkipUntil(callback func(T, int) bool) *LazyCollecti
 			if !found && callback(item, idx) {
 				found = true
 			}
+
 			if found {
 				return yield(item)
 			}
+
 			idx++
+
 			return true
 		})
 	})
@@ -477,9 +543,11 @@ func (lc *LazyCollection[T]) SkipWhile(callback func(T, int) bool) *LazyCollecti
 // Slice returns a subset of the lazy collection starting at offset with an optional length.
 func (lc *LazyCollection[T]) Slice(offset int, lengths ...int) *LazyCollection[T] {
 	result := lc.Skip(offset)
+
 	if len(lengths) > 0 {
 		result = result.Take(lengths[0])
 	}
+
 	return result
 }
 
@@ -489,15 +557,19 @@ func (lc *LazyCollection[T]) Chunk(size int) [][]T {
 	chunk := make([]T, 0, size)
 	lc.source(func(item T) bool {
 		chunk = append(chunk, item)
+
 		if len(chunk) >= size {
 			result = append(result, chunk)
 			chunk = make([]T, 0, size)
 		}
+
 		return true
 	})
+
 	if len(chunk) > 0 {
 		result = append(result, chunk)
 	}
+
 	return result
 }
 
@@ -514,21 +586,27 @@ func (lc *LazyCollection[T]) ChunkWhile(callback func(T, int, []T) bool) [][]T {
 			result = append(result, current)
 			current = []T{item}
 		}
+
 		idx++
+
 		return true
 	})
+
 	if len(current) > 0 {
 		result = append(result, current)
 	}
+
 	return result
 }
 
 // Nth returns every step-th element, starting from an optional offset.
 func (lc *LazyCollection[T]) Nth(step int, offsets ...int) *LazyCollection[T] {
 	offset := 0
+
 	if len(offsets) > 0 {
 		offset = offsets[0]
 	}
+
 	return NewLazy(func(yield func(T) bool) {
 		idx := 0
 		lc.source(func(item T) bool {
@@ -537,7 +615,9 @@ func (lc *LazyCollection[T]) Nth(step int, offsets ...int) *LazyCollection[T] {
 					return false
 				}
 			}
+
 			idx++
+
 			return true
 		})
 	})
@@ -549,6 +629,7 @@ func (lc *LazyCollection[T]) Concat(items []T) *LazyCollection[T] {
 		lc.source(func(item T) bool {
 			return yield(item)
 		})
+
 		for _, item := range items {
 			if !yield(item) {
 				return
@@ -563,13 +644,16 @@ func (lc *LazyCollection[T]) Pad(size int, value T) *LazyCollection[T] {
 	return NewLazy(func(yield func(T) bool) {
 		count := 0
 		absSize := size
+
 		if absSize < 0 {
 			absSize = -absSize
 		}
+
 		if size < 0 {
 			// Evaluate to know count
 			items := lc.All()
 			padCount := absSize - len(items)
+
 			if padCount > 0 {
 				for i := 0; i < padCount; i++ {
 					if !yield(value) {
@@ -577,6 +661,7 @@ func (lc *LazyCollection[T]) Pad(size int, value T) *LazyCollection[T] {
 					}
 				}
 			}
+
 			for _, item := range items {
 				if !yield(item) {
 					return
@@ -585,12 +670,15 @@ func (lc *LazyCollection[T]) Pad(size int, value T) *LazyCollection[T] {
 		} else {
 			lc.source(func(item T) bool {
 				count++
+
 				return yield(item)
 			})
+
 			for count < size {
 				if !yield(value) {
 					return
 				}
+
 				count++
 			}
 		}
@@ -604,6 +692,7 @@ func (lc *LazyCollection[T]) TapEach(callback func(T, int)) *LazyCollection[T] {
 		lc.source(func(item T) bool {
 			callback(item, idx)
 			idx++
+
 			return yield(item)
 		})
 	})
@@ -617,7 +706,9 @@ func (lc *LazyCollection[T]) Throttle(delay time.Duration) *LazyCollection[T] {
 			if !first {
 				time.Sleep(delay)
 			}
+
 			first = false
+
 			return yield(item)
 		})
 	})
@@ -628,6 +719,7 @@ func (lc *LazyCollection[T]) Throttle(delay time.Duration) *LazyCollection[T] {
 func (lc *LazyCollection[T]) Remember() *LazyCollection[T] {
 	var cache []T
 	cached := false
+
 	return NewLazy(func(yield func(T) bool) {
 		if cached {
 			for _, item := range cache {
@@ -635,11 +727,14 @@ func (lc *LazyCollection[T]) Remember() *LazyCollection[T] {
 					return
 				}
 			}
+
 			return
 		}
+
 		cache = make([]T, 0)
 		lc.source(func(item T) bool {
 			cache = append(cache, item)
+
 			return yield(item)
 		})
 		cached = true
@@ -653,17 +748,22 @@ func (lc *LazyCollection[T]) Every(callback func(T, int) bool) bool {
 	lc.source(func(item T) bool {
 		if !callback(item, idx) {
 			result = false
+
 			return false
 		}
+
 		idx++
+
 		return true
 	})
+
 	return result
 }
 
 // Has reports whether the given zero-based index exists in the collection.
 func (lc *LazyCollection[T]) Has(index int) bool {
 	_, ok := lc.Get(index)
+
 	return ok
 }
 
@@ -674,6 +774,7 @@ func (lc *LazyCollection[T]) HasAny(indices ...int) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -682,9 +783,11 @@ func (lc *LazyCollection[T]) HasAny(indices ...int) bool {
 func (lc *LazyCollection[T]) HasSole(predicates ...func(T, int) bool) bool {
 	count := 0
 	idx := 0
+
 	if len(predicates) == 0 || predicates[0] == nil {
 		lc.source(func(_ T) bool {
 			count++
+
 			return count < 2
 		})
 	} else {
@@ -692,14 +795,18 @@ func (lc *LazyCollection[T]) HasSole(predicates ...func(T, int) bool) bool {
 		lc.source(func(item T) bool {
 			if predicate(item, idx) {
 				count++
+
 				if count > 1 {
 					return false
 				}
 			}
+
 			idx++
+
 			return true
 		})
 	}
+
 	return count == 1
 }
 
@@ -708,8 +815,10 @@ func (lc *LazyCollection[T]) Implode(glue string) string {
 	parts := make([]string, 0)
 	lc.source(func(item T) bool {
 		parts = append(parts, fmt.Sprint(item))
+
 		return true
 	})
+
 	return strings.Join(parts, glue)
 }
 
@@ -719,19 +828,25 @@ func (lc *LazyCollection[T]) Join(glue string, finalGlues ...string) string {
 	parts := make([]string, 0)
 	lc.source(func(item T) bool {
 		parts = append(parts, fmt.Sprint(item))
+
 		return true
 	})
+
 	if len(parts) == 0 {
 		return ""
 	}
+
 	if len(parts) == 1 {
 		return parts[0]
 	}
+
 	if len(finalGlues) > 0 && finalGlues[0] != "" {
 		last := parts[len(parts)-1]
 		rest := parts[:len(parts)-1]
+
 		return strings.Join(rest, glue) + finalGlues[0] + last
 	}
+
 	return strings.Join(parts, glue)
 }
 
@@ -740,9 +855,11 @@ func (lc *LazyCollection[T]) When(condition bool, callback func(*LazyCollection[
 	if condition {
 		return callback(lc)
 	}
+
 	if len(defaults) > 0 {
 		return defaults[0](lc)
 	}
+
 	return lc
 }
 
@@ -769,8 +886,10 @@ func LazyReduce[T any, R any](lc *LazyCollection[T], callback func(R, T, int) R,
 	lc.source(func(item T) bool {
 		result = callback(result, item, idx)
 		idx++
+
 		return true
 	})
+
 	return result
 }
 
@@ -780,10 +899,13 @@ func LazyUnique[T any, K comparable](lc *LazyCollection[T], keyFunc func(T) K) *
 		seen := make(map[K]bool)
 		lc.source(func(item T) bool {
 			key := keyFunc(item)
+
 			if !seen[key] {
 				seen[key] = true
+
 				return yield(item)
 			}
+
 			return true
 		})
 	})
@@ -803,12 +925,15 @@ func LazyGroupBy[T any, K comparable](lc *LazyCollection[T], keyFunc func(T) K) 
 	lc.source(func(item T) bool {
 		key := keyFunc(item)
 		groups[key] = append(groups[key], item)
+
 		return true
 	})
 	result := make(map[K]*LazyCollection[T])
+
 	for key, items := range groups {
 		result[key] = LazyFrom(items)
 	}
+
 	return result
 }
 
@@ -818,8 +943,10 @@ func LazyKeyBy[T any, K comparable](lc *LazyCollection[T], keyFunc func(T) K) ma
 	result := make(map[K]T)
 	lc.source(func(item T) bool {
 		result[keyFunc(item)] = item
+
 		return true
 	})
+
 	return result
 }
 
@@ -828,8 +955,10 @@ func LazyCountBy[T any, K comparable](lc *LazyCollection[T], keyFunc func(T) K) 
 	result := make(map[K]int)
 	lc.source(func(item T) bool {
 		result[keyFunc(item)]++
+
 		return true
 	})
+
 	return result
 }
 
@@ -838,5 +967,6 @@ func LazyCountBy[T any, K comparable](lc *LazyCollection[T], keyFunc func(T) K) 
 func (lc *LazyCollection[T]) Dump() *LazyCollection[T] {
 	items := lc.All()
 	fmt.Printf("%v\n", items)
+
 	return LazyFrom(items)
 }
