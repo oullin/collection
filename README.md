@@ -10,7 +10,7 @@ Requires **Go 1.25** or later.
 
 ## Overview
 
-This library is a port of Laravel's [Illuminate\Support\Collection](https://github.com/laravel/framework/tree/master/src/Illuminate/Collections) to Go. It preserves the same rich API surface -- `filter`, `map`, `reduce`, `flatMap`, `chunk`, `partition`, and many more -- while redesigning everything idiomatically for Go with generics, `iter.Seq` for lazy evaluation, and full type safety.
+This library is a port of Laravel's [Illuminate\Support\Collection](https://github.com/laravel/framework/tree/master/src/Illuminate/Collections) to Go. It preserves the same rich API surface – `filter`, `map`, `reduce`, `flatMap`, `chunk`, `partition`, and many more – while redesigning everything idiomatically for Go with generics, `iter.Seq` for lazy evaluation, and full type safety.
 
 - **Readable data pipelines** -- chain `.Filter().Map().Take()` instead of nesting loops.
 - **Type-safe generics** -- no `interface{}` casting; the compiler catches type errors at build time.
@@ -23,7 +23,7 @@ This library is a port of Laravel's [Illuminate\Support\Collection](https://gith
 ```go
 package main
 
-import (
+import(
     "fmt"
     "github.com/gocanto/collection/collection"
 )
@@ -43,9 +43,12 @@ func main() {
 
 | Package | Description |
 |---------|-------------|
-| `collection` | Core collection types: `Collection[T]`, `MapCollection[K,V]`, `LazyCollection[T]`, and helper functions. |
-| `collection/arr` | Standalone generic slice utilities: `Flatten`, `Sort`, `Where`, `Map`, `Pluck`, `Partition`, etc. |
-| `collection/kv` | Map utilities with dot-notation support: `Get`, `Set`, `Has`, `Dot`, `Undot`, `Only`, `Query`, etc. |
+| `collection` | Core `Collection[T]` -- eager, generic slice wrapper with fluent API. |
+| `lazy` | `LazyCollection[T]` -- lazily-evaluated sequences backed by `iter.Seq[T]`. |
+| `collectible` | `MapCollection[K,V]` -- ordered map with fluent key-value API. |
+| `support` | Shared types (`Pair`, `Numeric`) and errors used across packages. |
+| `arr` | Standalone generic slice utilities: `Flatten`, `Sort`, `Where`, `Map`, `Pluck`, `Partition`, etc. |
+| `kv` | Map utilities with dot-notation support: `Get`, `Set`, `Has`, `Dot`, `Undot`, `Only`, `Query`, etc. |
 
 ## Documentation
 
@@ -59,6 +62,6 @@ Full API documentation is available in the [docs](docs/) directory:
 - [kv](docs/kv.md) -- Map utilities API reference.
 - [Helpers](docs/helpers.md) -- Root-package helper functions.
 
-## License
+## Licence
 
-MIT -- see [LICENSE](LICENSE) for details.
+MIT -- see [LICENCE](LICENSE) for details.

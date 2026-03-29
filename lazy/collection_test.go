@@ -1,12 +1,12 @@
-package collection
+package lazy
 
 import (
 	"reflect"
 	"testing"
 )
 
-func TestLazyFrom(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3})
+func TestFrom(t *testing.T) {
+	lc := From([]int{1, 2, 3})
 	items := lc.All()
 	expected := []int{1, 2, 3}
 
@@ -15,8 +15,8 @@ func TestLazyFrom(t *testing.T) {
 	}
 }
 
-func TestLazyEmpty(t *testing.T) {
-	lc := LazyEmpty[int]()
+func TestEmpty(t *testing.T) {
+	lc := Empty[int]()
 
 	if !lc.IsEmpty() {
 		t.Error("expected empty")
@@ -27,8 +27,8 @@ func TestLazyEmpty(t *testing.T) {
 	}
 }
 
-func TestLazyRange(t *testing.T) {
-	lc := LazyRange(1, 5)
+func TestRange(t *testing.T) {
+	lc := Range(1, 5)
 	items := lc.All()
 	expected := []int{1, 2, 3, 4, 5}
 
@@ -36,7 +36,7 @@ func TestLazyRange(t *testing.T) {
 		t.Errorf("expected %v, got %v", expected, items)
 	}
 
-	lc2 := LazyRange(5, 1)
+	lc2 := Range(5, 1)
 	items2 := lc2.All()
 	expected2 := []int{5, 4, 3, 2, 1}
 
@@ -45,8 +45,8 @@ func TestLazyRange(t *testing.T) {
 	}
 }
 
-func TestLazyTimes(t *testing.T) {
-	lc := LazyTimes(3, func(i int) int { return i * 10 })
+func TestTimes(t *testing.T) {
+	lc := Times(3, func(i int) int { return i * 10 })
 	expected := []int{10, 20, 30}
 
 	if !reflect.DeepEqual(lc.All(), expected) {
@@ -54,25 +54,25 @@ func TestLazyTimes(t *testing.T) {
 	}
 }
 
-func TestLazyCount(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5})
+func TestCount(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
 
 	if lc.Count() != 5 {
 		t.Errorf("expected 5, got %d", lc.Count())
 	}
 }
 
-func TestLazyEager(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3})
-	c := lc.Eager()
+func TestEager(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	items := lc.Eager()
 
-	if c.Count() != 3 {
-		t.Errorf("expected 3, got %d", c.Count())
+	if len(items) != 3 {
+		t.Errorf("expected 3, got %d", len(items))
 	}
 }
 
-func TestLazyFirst(t *testing.T) {
-	lc := LazyFrom([]int{10, 20, 30})
+func TestFirst(t *testing.T) {
+	lc := From([]int{10, 20, 30})
 	v, ok := lc.First()
 
 	if !ok || v != 10 {
@@ -86,8 +86,8 @@ func TestLazyFirst(t *testing.T) {
 	}
 }
 
-func TestLazyLast(t *testing.T) {
-	lc := LazyFrom([]int{10, 20, 30})
+func TestLast(t *testing.T) {
+	lc := From([]int{10, 20, 30})
 	v, ok := lc.Last()
 
 	if !ok || v != 30 {
@@ -101,8 +101,8 @@ func TestLazyLast(t *testing.T) {
 	}
 }
 
-func TestLazyGet(t *testing.T) {
-	lc := LazyFrom([]int{10, 20, 30})
+func TestGet(t *testing.T) {
+	lc := From([]int{10, 20, 30})
 	v, ok := lc.Get(1)
 
 	if !ok || v != 20 {
@@ -116,8 +116,8 @@ func TestLazyGet(t *testing.T) {
 	}
 }
 
-func TestLazyContains(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5})
+func TestContains(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
 
 	if !lc.Contains(func(item int, _ int) bool { return item == 3 }) {
 		t.Error("expected to contain 3")
@@ -128,8 +128,8 @@ func TestLazyContains(t *testing.T) {
 	}
 }
 
-func TestLazySearch(t *testing.T) {
-	lc := LazyFrom([]int{10, 20, 30})
+func TestSearch(t *testing.T) {
+	lc := From([]int{10, 20, 30})
 	idx, ok := lc.Search(func(item int, _ int) bool { return item == 20 })
 
 	if !ok || idx != 1 {
@@ -137,8 +137,8 @@ func TestLazySearch(t *testing.T) {
 	}
 }
 
-func TestLazyBefore(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5})
+func TestBefore(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
 	v, ok := lc.Before(func(item int, _ int) bool { return item == 3 })
 
 	if !ok || v != 2 {
@@ -146,8 +146,8 @@ func TestLazyBefore(t *testing.T) {
 	}
 }
 
-func TestLazyAfter(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5})
+func TestAfter(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
 	v, ok := lc.After(func(item int, _ int) bool { return item == 3 })
 
 	if !ok || v != 4 {
@@ -155,8 +155,8 @@ func TestLazyAfter(t *testing.T) {
 	}
 }
 
-func TestLazyFilter(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5})
+func TestFilter(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
 	filtered := lc.Filter(func(item int, _ int) bool { return item%2 == 0 })
 	expected := []int{2, 4}
 
@@ -165,8 +165,8 @@ func TestLazyFilter(t *testing.T) {
 	}
 }
 
-func TestLazyReject(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5})
+func TestReject(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
 	rejected := lc.Reject(func(item int, _ int) bool { return item%2 == 0 })
 	expected := []int{1, 3, 5}
 
@@ -175,9 +175,9 @@ func TestLazyReject(t *testing.T) {
 	}
 }
 
-func TestLazyMap(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3})
-	mapped := LazyMap(lc, func(item int, _ int) int { return item * 2 })
+func TestMap(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	mapped := Map(lc, func(item int, _ int) int { return item * 2 })
 	expected := []int{2, 4, 6}
 
 	if !reflect.DeepEqual(mapped.All(), expected) {
@@ -185,9 +185,9 @@ func TestLazyMap(t *testing.T) {
 	}
 }
 
-func TestLazyFlatMap(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3})
-	result := LazyFlatMap(lc, func(item int, _ int) []int { return []int{item, item * 10} })
+func TestFlatMap(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	result := FlatMap(lc, func(item int, _ int) []int { return []int{item, item * 10} })
 	expected := []int{1, 10, 2, 20, 3, 30}
 
 	if !reflect.DeepEqual(result.All(), expected) {
@@ -195,8 +195,8 @@ func TestLazyFlatMap(t *testing.T) {
 	}
 }
 
-func TestLazyTake(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5})
+func TestTake(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
 	taken := lc.Take(3)
 	expected := []int{1, 2, 3}
 
@@ -213,8 +213,8 @@ func TestLazyTake(t *testing.T) {
 	}
 }
 
-func TestLazyTakeUntil(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5})
+func TestTakeUntil(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
 	result := lc.TakeUntil(func(item int, _ int) bool { return item == 4 })
 	expected := []int{1, 2, 3}
 
@@ -223,8 +223,8 @@ func TestLazyTakeUntil(t *testing.T) {
 	}
 }
 
-func TestLazyTakeWhile(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5})
+func TestTakeWhile(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
 	result := lc.TakeWhile(func(item int, _ int) bool { return item < 4 })
 	expected := []int{1, 2, 3}
 
@@ -233,8 +233,8 @@ func TestLazyTakeWhile(t *testing.T) {
 	}
 }
 
-func TestLazySkip(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5})
+func TestSkip(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
 	result := lc.Skip(2)
 	expected := []int{3, 4, 5}
 
@@ -243,8 +243,8 @@ func TestLazySkip(t *testing.T) {
 	}
 }
 
-func TestLazySkipUntil(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5})
+func TestSkipUntil(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
 	result := lc.SkipUntil(func(item int, _ int) bool { return item == 3 })
 	expected := []int{3, 4, 5}
 
@@ -253,8 +253,8 @@ func TestLazySkipUntil(t *testing.T) {
 	}
 }
 
-func TestLazySkipWhile(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5})
+func TestSkipWhile(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
 	result := lc.SkipWhile(func(item int, _ int) bool { return item < 3 })
 	expected := []int{3, 4, 5}
 
@@ -263,8 +263,8 @@ func TestLazySkipWhile(t *testing.T) {
 	}
 }
 
-func TestLazySlice(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5})
+func TestSlice(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
 	result := lc.Slice(1, 3)
 	expected := []int{2, 3, 4}
 
@@ -273,8 +273,8 @@ func TestLazySlice(t *testing.T) {
 	}
 }
 
-func TestLazyChunk(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5})
+func TestChunk(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
 	chunks := lc.Chunk(2)
 
 	if len(chunks) != 3 {
@@ -290,8 +290,8 @@ func TestLazyChunk(t *testing.T) {
 	}
 }
 
-func TestLazyNth(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5, 6, 7, 8})
+func TestNth(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5, 6, 7, 8})
 	result := lc.Nth(3)
 	expected := []int{1, 4, 7}
 
@@ -300,8 +300,8 @@ func TestLazyNth(t *testing.T) {
 	}
 }
 
-func TestLazyConcat(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3})
+func TestConcat(t *testing.T) {
+	lc := From([]int{1, 2, 3})
 	result := lc.Concat([]int{4, 5})
 	expected := []int{1, 2, 3, 4, 5}
 
@@ -310,8 +310,8 @@ func TestLazyConcat(t *testing.T) {
 	}
 }
 
-func TestLazyPad(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3})
+func TestPad(t *testing.T) {
+	lc := From([]int{1, 2, 3})
 	result := lc.Pad(5, 0)
 	expected := []int{1, 2, 3, 0, 0}
 
@@ -320,16 +320,16 @@ func TestLazyPad(t *testing.T) {
 	}
 }
 
-func TestLazyEvery(t *testing.T) {
-	lc := LazyFrom([]int{2, 4, 6, 8})
+func TestEvery(t *testing.T) {
+	lc := From([]int{2, 4, 6, 8})
 
 	if !lc.Every(func(item int, _ int) bool { return item%2 == 0 }) {
 		t.Error("expected all even")
 	}
 }
 
-func TestLazyImplode(t *testing.T) {
-	lc := LazyFrom([]string{"a", "b", "c"})
+func TestImplode(t *testing.T) {
+	lc := From([]string{"a", "b", "c"})
 	result := lc.Implode(", ")
 
 	if result != "a, b, c" {
@@ -337,8 +337,8 @@ func TestLazyImplode(t *testing.T) {
 	}
 }
 
-func TestLazyJoin(t *testing.T) {
-	lc := LazyFrom([]string{"a", "b", "c"})
+func TestJoin(t *testing.T) {
+	lc := From([]string{"a", "b", "c"})
 	result := lc.Join(", ", " and ")
 
 	if result != "a, b and c" {
@@ -346,18 +346,18 @@ func TestLazyJoin(t *testing.T) {
 	}
 }
 
-func TestLazyReduce(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5})
-	sum := LazyReduce(lc, func(carry int, item int, _ int) int { return carry + item }, 0)
+func TestReduce(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
+	sum := Reduce(lc, func(carry int, item int, _ int) int { return carry + item }, 0)
 
 	if sum != 15 {
 		t.Errorf("expected 15, got %d", sum)
 	}
 }
 
-func TestLazyUnique(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 2, 3, 3, 3})
-	result := LazyUnique(lc, func(item int) int { return item })
+func TestUnique(t *testing.T) {
+	lc := From([]int{1, 2, 2, 3, 3, 3})
+	result := Unique(lc, func(item int) int { return item })
 	expected := []int{1, 2, 3}
 
 	if !reflect.DeepEqual(result.All(), expected) {
@@ -365,14 +365,14 @@ func TestLazyUnique(t *testing.T) {
 	}
 }
 
-func TestLazyPluck(t *testing.T) {
+func TestPluck(t *testing.T) {
 	type User struct {
 		Name string
 		Age  int
 	}
 
-	lc := LazyFrom([]User{{"Alice", 25}, {"Bob", 30}})
-	names := LazyPluck(lc, func(u User) string { return u.Name })
+	lc := From([]User{{"Alice", 25}, {"Bob", 30}})
+	names := Pluck(lc, func(u User) string { return u.Name })
 	expected := []string{"Alice", "Bob"}
 
 	if !reflect.DeepEqual(names.All(), expected) {
@@ -380,9 +380,9 @@ func TestLazyPluck(t *testing.T) {
 	}
 }
 
-func TestLazyGroupBy(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5, 6})
-	groups := LazyGroupBy(lc, func(item int) string {
+func TestGroupBy(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5, 6})
+	groups := GroupBy(lc, func(item int) string {
 		if item%2 == 0 {
 			return "even"
 		}
@@ -395,32 +395,32 @@ func TestLazyGroupBy(t *testing.T) {
 	}
 }
 
-func TestLazyKeyBy(t *testing.T) {
+func TestKeyBy(t *testing.T) {
 	type User struct {
 		ID   int
 		Name string
 	}
 
-	lc := LazyFrom([]User{{1, "Alice"}, {2, "Bob"}})
-	keyed := LazyKeyBy(lc, func(u User) int { return u.ID })
+	lc := From([]User{{1, "Alice"}, {2, "Bob"}})
+	keyed := KeyBy(lc, func(u User) int { return u.ID })
 
 	if keyed[1].Name != "Alice" {
 		t.Error("expected Alice")
 	}
 }
 
-func TestLazyCountBy(t *testing.T) {
-	lc := LazyFrom([]string{"apple", "banana", "apple"})
-	counts := LazyCountBy(lc, func(item string) string { return item })
+func TestCountBy(t *testing.T) {
+	lc := From([]string{"apple", "banana", "apple"})
+	counts := CountBy(lc, func(item string) string { return item })
 
 	if counts["apple"] != 2 {
 		t.Errorf("expected 2, got %d", counts["apple"])
 	}
 }
 
-func TestLazyRemember(t *testing.T) {
+func TestRemember(t *testing.T) {
 	callCount := 0
-	lc := NewLazy(func(yield func(int) bool) {
+	lc := New(func(yield func(int) bool) {
 		callCount++
 
 		for i := 1; i <= 3; i++ {
@@ -441,19 +441,19 @@ func TestLazyRemember(t *testing.T) {
 	}
 }
 
-func TestLazyContainsOneItem(t *testing.T) {
-	if !LazyFrom([]int{1}).ContainsOneItem() {
+func TestContainsOneItem(t *testing.T) {
+	if !From([]int{1}).ContainsOneItem() {
 		t.Error("expected true")
 	}
 
-	if LazyFrom([]int{1, 2}).ContainsOneItem() {
+	if From([]int{1, 2}).ContainsOneItem() {
 		t.Error("expected false")
 	}
 }
 
-func TestLazyWhen(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3})
-	result := lc.When(true, func(lc *LazyCollection[int]) *LazyCollection[int] {
+func TestWhen(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	result := lc.When(true, func(lc *Collection[int]) *Collection[int] {
 		return lc.Take(2)
 	})
 
@@ -462,8 +462,8 @@ func TestLazyWhen(t *testing.T) {
 	}
 }
 
-func TestLazyTapEach(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3})
+func TestTapEach(t *testing.T) {
+	lc := From([]int{1, 2, 3})
 	sum := 0
 	result := lc.TapEach(func(item int, _ int) {
 		sum += item
@@ -476,17 +476,17 @@ func TestLazyTapEach(t *testing.T) {
 	}
 }
 
-func TestCollectionToLazy(t *testing.T) {
-	c := New(1, 2, 3)
-	lc := c.Lazy()
+func TestFromSlice(t *testing.T) {
+	items := []int{1, 2, 3}
+	lc := From(items)
 
 	if lc.Count() != 3 {
 		t.Errorf("expected 3, got %d", lc.Count())
 	}
 }
 
-func TestLazyEach(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3, 4, 5})
+func TestEach(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
 	sum := 0
 	lc.Each(func(item int, _ int) bool {
 		sum += item
@@ -499,8 +499,8 @@ func TestLazyEach(t *testing.T) {
 	}
 }
 
-func TestLazySole(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3})
+func TestSole(t *testing.T) {
+	lc := From([]int{1, 2, 3})
 	v, err := lc.Sole(func(item int, _ int) bool { return item == 2 })
 
 	if err != nil || v != 2 {
@@ -508,15 +508,15 @@ func TestLazySole(t *testing.T) {
 	}
 }
 
-func TestLazyFirstOrFail(t *testing.T) {
-	lc := LazyFrom([]int{1, 2, 3})
+func TestFirstOrFail(t *testing.T) {
+	lc := From([]int{1, 2, 3})
 	v, err := lc.FirstOrFail()
 
 	if err != nil || v != 1 {
 		t.Errorf("expected 1, got %d, err: %v", v, err)
 	}
 
-	empty := LazyEmpty[int]()
+	empty := Empty[int]()
 	_, err = empty.FirstOrFail()
 
 	if err == nil {

@@ -1,22 +1,24 @@
-package collection
+package collectible
 
 import (
 	"reflect"
 	"testing"
+
+	"github.com/gocanto/collection/support"
 )
 
-func TestNewMap(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2, "c": 3})
+func TestNew(t *testing.T) {
+	m := New(map[string]int{"a": 1, "b": 2, "c": 3})
 
 	if m.Count() != 3 {
 		t.Errorf("expected 3, got %d", m.Count())
 	}
 }
 
-func TestNewMapFromPairs(t *testing.T) {
-	m := NewMapFromPairs(
-		Pair[string, int]{Key: "a", Value: 1},
-		Pair[string, int]{Key: "b", Value: 2},
+func TestFromPairs(t *testing.T) {
+	m := FromPairs(
+		support.Pair[string, int]{Key: "a", Value: 1},
+		support.Pair[string, int]{Key: "b", Value: 2},
 	)
 	v, ok := m.Get("a")
 
@@ -26,7 +28,7 @@ func TestNewMapFromPairs(t *testing.T) {
 }
 
 func TestMapGet(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2})
+	m := New(map[string]int{"a": 1, "b": 2})
 
 	v, ok := m.Get("a")
 
@@ -48,7 +50,7 @@ func TestMapGet(t *testing.T) {
 }
 
 func TestMapGetOrPut(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1})
+	m := New(map[string]int{"a": 1})
 
 	v := m.GetOrPut("a", 99)
 
@@ -68,7 +70,7 @@ func TestMapGetOrPut(t *testing.T) {
 }
 
 func TestMapHas(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2})
+	m := New(map[string]int{"a": 1, "b": 2})
 
 	if !m.Has("a") {
 		t.Error("expected to have 'a'")
@@ -80,7 +82,7 @@ func TestMapHas(t *testing.T) {
 }
 
 func TestMapHasAny(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2})
+	m := New(map[string]int{"a": 1, "b": 2})
 
 	if !m.HasAny("z", "a") {
 		t.Error("expected HasAny to return true")
@@ -92,7 +94,7 @@ func TestMapHasAny(t *testing.T) {
 }
 
 func TestMapPut(t *testing.T) {
-	m := NewMap(map[string]int{})
+	m := New(map[string]int{})
 	m.Put("a", 1)
 	v, ok := m.Get("a")
 
@@ -102,7 +104,7 @@ func TestMapPut(t *testing.T) {
 }
 
 func TestMapPull(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2})
+	m := New(map[string]int{"a": 1, "b": 2})
 	v, ok := m.Pull("a")
 
 	if !ok || v != 1 {
@@ -115,7 +117,7 @@ func TestMapPull(t *testing.T) {
 }
 
 func TestMapForget(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2, "c": 3})
+	m := New(map[string]int{"a": 1, "b": 2, "c": 3})
 	m.Forget("a", "c")
 
 	if m.Count() != 1 {
@@ -124,7 +126,7 @@ func TestMapForget(t *testing.T) {
 }
 
 func TestMapOnly(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2, "c": 3})
+	m := New(map[string]int{"a": 1, "b": 2, "c": 3})
 	result := m.Only("a", "c")
 
 	if result.Count() != 2 {
@@ -137,7 +139,7 @@ func TestMapOnly(t *testing.T) {
 }
 
 func TestMapExcept(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2, "c": 3})
+	m := New(map[string]int{"a": 1, "b": 2, "c": 3})
 	result := m.Except("b")
 
 	if result.Count() != 2 {
@@ -150,31 +152,31 @@ func TestMapExcept(t *testing.T) {
 }
 
 func TestMapKeys(t *testing.T) {
-	m := NewMapFromPairs(
-		Pair[string, int]{Key: "a", Value: 1},
-		Pair[string, int]{Key: "b", Value: 2},
+	m := FromPairs(
+		support.Pair[string, int]{Key: "a", Value: 1},
+		support.Pair[string, int]{Key: "b", Value: 2},
 	)
 	keys := m.Keys()
 
-	if keys.Count() != 2 {
-		t.Errorf("expected 2 keys, got %d", keys.Count())
+	if len(keys) != 2 {
+		t.Errorf("expected 2 keys, got %d", len(keys))
 	}
 }
 
 func TestMapValues(t *testing.T) {
-	m := NewMapFromPairs(
-		Pair[string, int]{Key: "a", Value: 1},
-		Pair[string, int]{Key: "b", Value: 2},
+	m := FromPairs(
+		support.Pair[string, int]{Key: "a", Value: 1},
+		support.Pair[string, int]{Key: "b", Value: 2},
 	)
 	values := m.Values()
 
-	if values.Count() != 2 {
-		t.Errorf("expected 2 values, got %d", values.Count())
+	if len(values) != 2 {
+		t.Errorf("expected 2 values, got %d", len(values))
 	}
 }
 
 func TestMapContains(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2})
+	m := New(map[string]int{"a": 1, "b": 2})
 
 	if !m.Contains(func(v int, k string) bool { return v == 2 }) {
 		t.Error("expected to contain value 2")
@@ -186,9 +188,9 @@ func TestMapContains(t *testing.T) {
 }
 
 func TestMapFirst(t *testing.T) {
-	m := NewMapFromPairs(
-		Pair[string, int]{Key: "a", Value: 1},
-		Pair[string, int]{Key: "b", Value: 2},
+	m := FromPairs(
+		support.Pair[string, int]{Key: "a", Value: 1},
+		support.Pair[string, int]{Key: "b", Value: 2},
 	)
 	v, ok := m.First()
 
@@ -198,9 +200,9 @@ func TestMapFirst(t *testing.T) {
 }
 
 func TestMapLast(t *testing.T) {
-	m := NewMapFromPairs(
-		Pair[string, int]{Key: "a", Value: 1},
-		Pair[string, int]{Key: "b", Value: 2},
+	m := FromPairs(
+		support.Pair[string, int]{Key: "a", Value: 1},
+		support.Pair[string, int]{Key: "b", Value: 2},
 	)
 	v, ok := m.Last()
 
@@ -210,7 +212,7 @@ func TestMapLast(t *testing.T) {
 }
 
 func TestMapFilter(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2, "c": 3})
+	m := New(map[string]int{"a": 1, "b": 2, "c": 3})
 	filtered := m.Filter(func(v int, k string) bool { return v > 1 })
 
 	if filtered.Count() != 2 {
@@ -219,7 +221,7 @@ func TestMapFilter(t *testing.T) {
 }
 
 func TestMapReject(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2, "c": 3})
+	m := New(map[string]int{"a": 1, "b": 2, "c": 3})
 	rejected := m.Reject(func(v int, k string) bool { return v > 1 })
 
 	if rejected.Count() != 1 {
@@ -228,7 +230,7 @@ func TestMapReject(t *testing.T) {
 }
 
 func TestMapValues_Transform(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2})
+	m := New(map[string]int{"a": 1, "b": 2})
 	result := MapValues(m, func(v int, k string) int { return v * 10 })
 	v, _ := result.Get("a")
 
@@ -238,7 +240,7 @@ func TestMapValues_Transform(t *testing.T) {
 }
 
 func TestMapEvery(t *testing.T) {
-	m := NewMap(map[string]int{"a": 2, "b": 4})
+	m := New(map[string]int{"a": 2, "b": 4})
 
 	if !m.Every(func(v int, k string) bool { return v%2 == 0 }) {
 		t.Error("expected all even")
@@ -246,7 +248,7 @@ func TestMapEvery(t *testing.T) {
 }
 
 func TestMapPartition(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2, "c": 3})
+	m := New(map[string]int{"a": 1, "b": 2, "c": 3})
 	pass, fail := m.Partition(func(v int, k string) bool { return v > 1 })
 
 	if pass.Count() != 2 {
@@ -259,7 +261,7 @@ func TestMapPartition(t *testing.T) {
 }
 
 func TestMapMerge(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2})
+	m := New(map[string]int{"a": 1, "b": 2})
 	result := m.Merge(map[string]int{"b": 20, "c": 3})
 	v, _ := result.Get("b")
 
@@ -273,7 +275,7 @@ func TestMapMerge(t *testing.T) {
 }
 
 func TestMapUnion(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2})
+	m := New(map[string]int{"a": 1, "b": 2})
 	result := m.Union(map[string]int{"b": 20, "c": 3})
 	v, _ := result.Get("b")
 
@@ -287,7 +289,7 @@ func TestMapUnion(t *testing.T) {
 }
 
 func TestMapDiffKeys(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2, "c": 3})
+	m := New(map[string]int{"a": 1, "b": 2, "c": 3})
 	result := m.DiffKeys(map[string]int{"b": 99})
 
 	if result.Has("b") {
@@ -300,7 +302,7 @@ func TestMapDiffKeys(t *testing.T) {
 }
 
 func TestMapIntersectByKeys(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2, "c": 3})
+	m := New(map[string]int{"a": 1, "b": 2, "c": 3})
 	result := m.IntersectByKeys(map[string]int{"a": 99, "c": 99})
 
 	if result.Count() != 2 {
@@ -308,9 +310,9 @@ func TestMapIntersectByKeys(t *testing.T) {
 	}
 }
 
-func TestMapFlip(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2})
-	flipped := MapFlip(m)
+func TestFlip(t *testing.T) {
+	m := New(map[string]int{"a": 1, "b": 2})
+	flipped := Flip(m)
 	v, ok := flipped.Get(1)
 
 	if !ok || v != "a" {
@@ -318,14 +320,14 @@ func TestMapFlip(t *testing.T) {
 	}
 }
 
-func TestMapSortKeys(t *testing.T) {
-	m := NewMapFromPairs(
-		Pair[string, int]{Key: "c", Value: 3},
-		Pair[string, int]{Key: "a", Value: 1},
-		Pair[string, int]{Key: "b", Value: 2},
+func TestSortKeys(t *testing.T) {
+	m := FromPairs(
+		support.Pair[string, int]{Key: "c", Value: 3},
+		support.Pair[string, int]{Key: "a", Value: 1},
+		support.Pair[string, int]{Key: "b", Value: 2},
 	)
-	sorted := MapSortKeys(m)
-	keys := sorted.Keys().All()
+	sorted := SortKeys(m)
+	keys := sorted.Keys()
 	expected := []string{"a", "b", "c"}
 
 	if !reflect.DeepEqual(keys, expected) {
@@ -333,14 +335,14 @@ func TestMapSortKeys(t *testing.T) {
 	}
 }
 
-func TestMapSortKeysDesc(t *testing.T) {
-	m := NewMapFromPairs(
-		Pair[string, int]{Key: "a", Value: 1},
-		Pair[string, int]{Key: "c", Value: 3},
-		Pair[string, int]{Key: "b", Value: 2},
+func TestSortKeysDesc(t *testing.T) {
+	m := FromPairs(
+		support.Pair[string, int]{Key: "a", Value: 1},
+		support.Pair[string, int]{Key: "c", Value: 3},
+		support.Pair[string, int]{Key: "b", Value: 2},
 	)
-	sorted := MapSortKeysDesc(m)
-	keys := sorted.Keys().All()
+	sorted := SortKeysDesc(m)
+	keys := sorted.Keys()
 	expected := []string{"c", "b", "a"}
 
 	if !reflect.DeepEqual(keys, expected) {
@@ -349,9 +351,9 @@ func TestMapSortKeysDesc(t *testing.T) {
 }
 
 func TestMapImplode(t *testing.T) {
-	m := NewMapFromPairs(
-		Pair[string, string]{Key: "a", Value: "hello"},
-		Pair[string, string]{Key: "b", Value: "world"},
+	m := FromPairs(
+		support.Pair[string, string]{Key: "a", Value: "hello"},
+		support.Pair[string, string]{Key: "b", Value: "world"},
 	)
 	result := m.Implode(", ")
 
@@ -361,7 +363,7 @@ func TestMapImplode(t *testing.T) {
 }
 
 func TestMapToJSON(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1})
+	m := New(map[string]int{"a": 1})
 	b, err := m.ToJSON()
 
 	if err != nil {
@@ -374,7 +376,7 @@ func TestMapToJSON(t *testing.T) {
 }
 
 func TestMapCopy(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1})
+	m := New(map[string]int{"a": 1})
 	m2 := m.Copy()
 	m.Put("b", 2)
 
@@ -384,20 +386,20 @@ func TestMapCopy(t *testing.T) {
 }
 
 func TestMapToPairs(t *testing.T) {
-	m := NewMapFromPairs(
-		Pair[string, int]{Key: "a", Value: 1},
-		Pair[string, int]{Key: "b", Value: 2},
+	m := FromPairs(
+		support.Pair[string, int]{Key: "a", Value: 1},
+		support.Pair[string, int]{Key: "b", Value: 2},
 	)
 	pairs := m.ToPairs()
 
-	if pairs.Count() != 2 {
-		t.Errorf("expected 2 pairs, got %d", pairs.Count())
+	if len(pairs) != 2 {
+		t.Errorf("expected 2 pairs, got %d", len(pairs))
 	}
 }
 
 func TestMapWhen(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1})
-	result := m.When(true, func(mc *MapCollection[string, int]) *MapCollection[string, int] {
+	m := New(map[string]int{"a": 1})
+	result := m.When(true, func(mc *Collection[string, int]) *Collection[string, int] {
 		mc.Put("b", 2)
 
 		return mc
@@ -409,9 +411,9 @@ func TestMapWhen(t *testing.T) {
 }
 
 func TestMapSearch(t *testing.T) {
-	m := NewMapFromPairs(
-		Pair[string, int]{Key: "a", Value: 1},
-		Pair[string, int]{Key: "b", Value: 2},
+	m := FromPairs(
+		support.Pair[string, int]{Key: "a", Value: 1},
+		support.Pair[string, int]{Key: "b", Value: 2},
 	)
 	key, ok := m.Search(func(v int, k string) bool { return v == 2 })
 
@@ -421,7 +423,7 @@ func TestMapSearch(t *testing.T) {
 }
 
 func TestMapIsEmpty(t *testing.T) {
-	m := NewMap(map[string]int{})
+	m := New(map[string]int{})
 
 	if !m.IsEmpty() {
 		t.Error("expected empty")
@@ -433,7 +435,7 @@ func TestMapIsEmpty(t *testing.T) {
 }
 
 func TestMapContainsOneItem(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1})
+	m := New(map[string]int{"a": 1})
 
 	if !m.ContainsOneItem() {
 		t.Error("expected true")
@@ -441,7 +443,7 @@ func TestMapContainsOneItem(t *testing.T) {
 }
 
 func TestMapContainsManyItems(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2})
+	m := New(map[string]int{"a": 1, "b": 2})
 
 	if !m.ContainsManyItems() {
 		t.Error("expected true")
@@ -449,9 +451,9 @@ func TestMapContainsManyItems(t *testing.T) {
 }
 
 func TestMapEach(t *testing.T) {
-	m := NewMapFromPairs(
-		Pair[string, int]{Key: "a", Value: 1},
-		Pair[string, int]{Key: "b", Value: 2},
+	m := FromPairs(
+		support.Pair[string, int]{Key: "a", Value: 1},
+		support.Pair[string, int]{Key: "b", Value: 2},
 	)
 	sum := 0
 	m.Each(func(v int, k string) bool {
@@ -466,7 +468,7 @@ func TestMapEach(t *testing.T) {
 }
 
 func TestMapDoesntContain(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1})
+	m := New(map[string]int{"a": 1})
 
 	if !m.DoesntContain(func(v int, k string) bool { return v == 99 }) {
 		t.Error("expected true")
@@ -474,13 +476,13 @@ func TestMapDoesntContain(t *testing.T) {
 }
 
 func TestMapSortKeysUsing(t *testing.T) {
-	m := NewMapFromPairs(
-		Pair[string, int]{Key: "banana", Value: 1},
-		Pair[string, int]{Key: "apple", Value: 2},
-		Pair[string, int]{Key: "cherry", Value: 3},
+	m := FromPairs(
+		support.Pair[string, int]{Key: "banana", Value: 1},
+		support.Pair[string, int]{Key: "apple", Value: 2},
+		support.Pair[string, int]{Key: "cherry", Value: 3},
 	)
 	sorted := m.SortKeysUsing(func(a, b string) bool { return a < b })
-	keys := sorted.Keys().All()
+	keys := sorted.Keys()
 	expected := []string{"apple", "banana", "cherry"}
 
 	if !reflect.DeepEqual(keys, expected) {
@@ -489,7 +491,7 @@ func TestMapSortKeysUsing(t *testing.T) {
 }
 
 func TestMapReplace(t *testing.T) {
-	m := NewMap(map[string]int{"a": 1, "b": 2})
+	m := New(map[string]int{"a": 1, "b": 2})
 	result := m.Replace(map[string]int{"b": 20, "c": 3})
 	v, _ := result.Get("b")
 

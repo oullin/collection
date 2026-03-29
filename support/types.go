@@ -1,4 +1,4 @@
-package collection
+package support
 
 // Numeric is a constraint for numeric types.
 type Numeric interface {

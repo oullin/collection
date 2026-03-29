@@ -1,21 +1,15 @@
-// Package collection provides fluent, generic wrappers for working with slices and maps.
+// Package collection provides a fluent, generic wrapper for working with slices of data.
 //
-// The core types are:
+// The core type is:
 //
 //   - [Collection] — a generic wrapper around a slice with a rich set of chainable methods
 //     for filtering, sorting, transforming, and aggregating data.
-//   - [MapCollection] — an ordered map with a fluent API for key-value operations,
-//     preserving insertion order.
-//   - [LazyCollection] — a lazily-evaluated sequence backed by [iter.Seq], allowing
-//     efficient pipeline processing of large or infinite datasets.
 //
-// All three types support conversion to Go 1.23+ iterators via their Iter methods,
-// enabling use with range-over-func loops.
+// # Related packages
 //
-// # Sub-packages
-//
-// Standalone utility functions are available in sub-packages:
-//
-//   - [github.com/gocanto/collection/arr] — generic slice helpers (filter, sort, partition, etc.)
-//   - [github.com/gocanto/collection/kv]  — map helpers with dot-notation support for nested maps
+//   - [github.com/gocanto/collection/lazy] — lazily evaluated sequences backed by iter.Seq
+//   - [github.com/gocanto/collection/collectible] — ordered map with fluent key-value API
+//   - [github.com/gocanto/collection/support] — shared types (Pair, Numeric) and errors
+//   - [github.com/gocanto/collection/arr] — generic slice helpers
+//   - [github.com/gocanto/collection/kv] — map helpers with dot-notation support
 package collection
