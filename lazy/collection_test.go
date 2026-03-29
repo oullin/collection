@@ -3,6 +3,7 @@ package lazy
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestFrom(t *testing.T) {
@@ -521,5 +522,383 @@ func TestFirstOrFail(t *testing.T) {
 
 	if err == nil {
 		t.Error("expected error")
+	}
+}
+
+func TestIter(t *testing.T) {
+	lc := From([]int{10, 20, 30})
+	sum := 0
+
+	for item := range lc.Iter() {
+		sum += item
+	}
+
+	if sum != 60 {
+		t.Errorf("expected 60, got %d", sum)
+	}
+}
+
+func TestCollect(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	items := lc.Collect()
+
+	if !reflect.DeepEqual(items, []int{1, 2, 3}) {
+		t.Errorf("expected [1 2 3], got %v", items)
+	}
+}
+
+func TestContainsManyItems(t *testing.T) {
+	if !From([]int{1, 2}).ContainsManyItems() {
+		t.Error("expected true for 2 items")
+	}
+
+	if From([]int{1}).ContainsManyItems() {
+		t.Error("expected false for 1 item")
+	}
+
+	if Empty[int]().ContainsManyItems() {
+		t.Error("expected false for empty")
+	}
+}
+
+func TestSome(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+
+	if !lc.Some(func(item int, _ int) bool { return item == 2 }) {
+		t.Error("expected true")
+	}
+
+	if lc.Some(func(item int, _ int) bool { return item > 10 }) {
+		t.Error("expected false")
+	}
+}
+
+func TestDoesntContain(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+
+	if !lc.DoesntContain(func(item int, _ int) bool { return item == 99 }) {
+		t.Error("expected true")
+	}
+
+	if lc.DoesntContain(func(item int, _ int) bool { return item == 2 }) {
+		t.Error("expected false")
+	}
+}
+
+func TestTap(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	called := false
+	result := lc.Tap(func(c *Collection[int]) {
+		called = true
+	})
+
+	if !called {
+		t.Error("expected callback to be called")
+	}
+
+	if result != lc {
+		t.Error("expected Tap to return self")
+	}
+}
+
+func TestHas(t *testing.T) {
+	lc := From([]int{10, 20, 30})
+
+	if !lc.Has(0) {
+		t.Error("expected true for index 0")
+	}
+
+	if !lc.Has(2) {
+		t.Error("expected true for index 2")
+	}
+
+	if lc.Has(5) {
+		t.Error("expected false for index 5")
+	}
+}
+
+func TestHasAny(t *testing.T) {
+	lc := From([]int{10, 20, 30})
+
+	if !lc.HasAny(0, 5) {
+		t.Error("expected true when at least one valid")
+	}
+
+	if lc.HasAny(5, 6, 7) {
+		t.Error("expected false when all invalid")
+	}
+}
+
+func TestHasSole(t *testing.T) {
+	single := From([]int{42})
+
+	if !single.HasSole() {
+		t.Error("expected true for single item without predicate")
+	}
+
+	multi := From([]int{1, 2, 3})
+
+	if multi.HasSole() {
+		t.Error("expected false for multiple items without predicate")
+	}
+
+	if !multi.HasSole(func(item int, _ int) bool { return item == 2 }) {
+		t.Error("expected true for single match")
+	}
+
+	if multi.HasSole(func(item int, _ int) bool { return item > 1 }) {
+		t.Error("expected false for multiple matches")
+	}
+
+	if multi.HasSole(func(item int, _ int) bool { return item > 10 }) {
+		t.Error("expected false for no matches")
+	}
+}
+
+func TestChunkWhile(t *testing.T) {
+	lc := From([]int{1, 1, 2, 2, 3})
+	chunks := lc.ChunkWhile(func(item int, _ int, current []int) bool {
+		return item == current[len(current)-1]
+	})
+
+	if len(chunks) != 3 {
+		t.Errorf("expected 3 chunks, got %d", len(chunks))
+	}
+
+	if !reflect.DeepEqual(chunks[0], []int{1, 1}) {
+		t.Errorf("expected [1 1], got %v", chunks[0])
+	}
+
+	if !reflect.DeepEqual(chunks[1], []int{2, 2}) {
+		t.Errorf("expected [2 2], got %v", chunks[1])
+	}
+
+	if !reflect.DeepEqual(chunks[2], []int{3}) {
+		t.Errorf("expected [3], got %v", chunks[2])
+	}
+}
+
+func TestTakeUntilTimeout(t *testing.T) {
+	lc := From([]int{1, 2, 3, 4, 5})
+	result := lc.TakeUntilTimeout(time.Second)
+	items := result.All()
+
+	if !reflect.DeepEqual(items, []int{1, 2, 3, 4, 5}) {
+		t.Errorf("expected all items with generous timeout, got %v", items)
+	}
+}
+
+func TestThrottle(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	result := lc.Throttle(time.Millisecond)
+	items := result.All()
+
+	if !reflect.DeepEqual(items, []int{1, 2, 3}) {
+		t.Errorf("expected [1 2 3], got %v", items)
+	}
+}
+
+func TestWhenFalseWithDefault(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	result := lc.When(false, func(c *Collection[int]) *Collection[int] {
+		return c.Take(1)
+	}, func(c *Collection[int]) *Collection[int] {
+		return c.Take(2)
+	})
+
+	if result.Count() != 2 {
+		t.Errorf("expected 2 (default applied), got %d", result.Count())
+	}
+}
+
+func TestWhenFalseWithoutDefault(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	result := lc.When(false, func(c *Collection[int]) *Collection[int] {
+		return c.Take(1)
+	})
+
+	if result.Count() != 3 {
+		t.Errorf("expected 3 (unchanged), got %d", result.Count())
+	}
+}
+
+func TestWhenEmpty(t *testing.T) {
+	empty := Empty[int]()
+	result := empty.WhenEmpty(func(c *Collection[int]) *Collection[int] {
+		return From([]int{1, 2, 3})
+	})
+
+	if result.Count() != 3 {
+		t.Errorf("expected 3, got %d", result.Count())
+	}
+
+	nonEmpty := From([]int{1})
+	called := false
+	nonEmpty.WhenEmpty(func(c *Collection[int]) *Collection[int] {
+		called = true
+
+		return c
+	})
+
+	if called {
+		t.Error("expected callback not called for non-empty")
+	}
+}
+
+func TestWhenNotEmpty(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	result := lc.WhenNotEmpty(func(c *Collection[int]) *Collection[int] {
+		return c.Take(1)
+	})
+
+	if result.Count() != 1 {
+		t.Errorf("expected 1, got %d", result.Count())
+	}
+
+	empty := Empty[int]()
+	called := false
+	empty.WhenNotEmpty(func(c *Collection[int]) *Collection[int] {
+		called = true
+
+		return c
+	})
+
+	if called {
+		t.Error("expected callback not called for empty")
+	}
+}
+
+func TestUnless(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	result := lc.Unless(false, func(c *Collection[int]) *Collection[int] {
+		return c.Take(2)
+	})
+
+	if result.Count() != 2 {
+		t.Errorf("expected 2, got %d", result.Count())
+	}
+
+	result2 := lc.Unless(true, func(c *Collection[int]) *Collection[int] {
+		return c.Take(1)
+	})
+
+	if result2.Count() != 3 {
+		t.Errorf("expected 3 (unchanged), got %d", result2.Count())
+	}
+}
+
+func TestDump(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	result := lc.Dump()
+	items := result.All()
+
+	if !reflect.DeepEqual(items, []int{1, 2, 3}) {
+		t.Errorf("expected [1 2 3], got %v", items)
+	}
+}
+
+func TestSoleEmpty(t *testing.T) {
+	lc := Empty[int]()
+	_, err := lc.Sole()
+
+	if err == nil {
+		t.Error("expected error for empty collection")
+	}
+}
+
+func TestSoleMultiple(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	_, err := lc.Sole()
+
+	if err == nil {
+		t.Error("expected error for multiple items")
+	}
+}
+
+func TestSoleSingle(t *testing.T) {
+	lc := From([]int{42})
+	v, err := lc.Sole()
+
+	if err != nil || v != 42 {
+		t.Errorf("expected 42, got %d, err: %v", v, err)
+	}
+}
+
+func TestSoleCallbackNoMatch(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	_, err := lc.Sole(func(item int, _ int) bool { return item > 10 })
+
+	if err == nil {
+		t.Error("expected error when no match")
+	}
+}
+
+func TestSoleCallbackMultipleMatches(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	_, err := lc.Sole(func(item int, _ int) bool { return item > 1 })
+
+	if err == nil {
+		t.Error("expected error for multiple matches")
+	}
+}
+
+func TestPadNegative(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	result := lc.Pad(-5, 0)
+	expected := []int{0, 0, 1, 2, 3}
+
+	if !reflect.DeepEqual(result.All(), expected) {
+		t.Errorf("expected %v, got %v", expected, result.All())
+	}
+}
+
+func TestPadAlreadySufficient(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+	result := lc.Pad(2, 0)
+	expected := []int{1, 2, 3}
+
+	if !reflect.DeepEqual(result.All(), expected) {
+		t.Errorf("expected %v (unchanged), got %v", expected, result.All())
+	}
+}
+
+func TestRangeSingle(t *testing.T) {
+	lc := Range(5, 5)
+	expected := []int{5}
+
+	if !reflect.DeepEqual(lc.All(), expected) {
+		t.Errorf("expected %v, got %v", expected, lc.All())
+	}
+}
+
+func TestTimesZero(t *testing.T) {
+	lc := Times(0, func(i int) int { return i })
+
+	if lc.Count() != 0 {
+		t.Errorf("expected 0, got %d", lc.Count())
+	}
+}
+
+func TestIsEmptyNonEmpty(t *testing.T) {
+	lc := From([]int{1})
+
+	if lc.IsEmpty() {
+		t.Error("expected false for non-empty")
+	}
+}
+
+func TestEveryEmpty(t *testing.T) {
+	lc := Empty[int]()
+
+	if !lc.Every(func(item int, _ int) bool { return false }) {
+		t.Error("expected true for empty collection")
+	}
+}
+
+func TestEveryFailing(t *testing.T) {
+	lc := From([]int{1, 2, 3})
+
+	if lc.Every(func(item int, _ int) bool { return item > 2 }) {
+		t.Error("expected false")
 	}
 }

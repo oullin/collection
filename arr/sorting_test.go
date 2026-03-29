@@ -37,6 +37,16 @@ func TestSortRecursive(t *testing.T) {
 	}
 }
 
+func TestSortRecursiveDesc(t *testing.T) {
+	items := []int{1, 3, 2}
+	result := arr.SortRecursiveDesc(items, func(a, b int) bool { return a < b })
+	expected := []int{3, 2, 1}
+
+	if !reflect.DeepEqual(result, expected) {
+		t.Errorf("expected %v, got %v", expected, result)
+	}
+}
+
 func TestShuffle(t *testing.T) {
 	items := []int{1, 2, 3, 4, 5}
 	result := arr.Shuffle(items)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 )
 
@@ -1443,5 +1444,745 @@ func TestWhenNotEmpty(t *testing.T) {
 
 	if !called {
 		t.Error("expected callback to be called")
+	}
+}
+
+func TestWrap(t *testing.T) {
+	c := New(1, 2, 3)
+	wrapped := Wrap[int](c)
+
+	if wrapped != c {
+		t.Error("expected same collection")
+	}
+
+	wrapped2 := Wrap[int]([]int{1, 2, 3})
+
+	if wrapped2.Count() != 3 {
+		t.Errorf("expected 3, got %d", wrapped2.Count())
+	}
+
+	wrapped3 := Wrap[int](42)
+
+	if wrapped3.Count() != 1 {
+		t.Errorf("expected 1, got %d", wrapped3.Count())
+	}
+
+	wrapped4 := Wrap[int]("string")
+
+	if !wrapped4.IsEmpty() {
+		t.Error("expected empty for incompatible type")
+	}
+}
+
+func TestUnwrap(t *testing.T) {
+	c := New(1, 2, 3)
+	items := Unwrap[int](c)
+
+	if len(items) != 3 {
+		t.Errorf("expected 3, got %d", len(items))
+	}
+
+	items2 := Unwrap[int]([]int{4, 5})
+
+	if len(items2) != 2 {
+		t.Errorf("expected 2, got %d", len(items2))
+	}
+
+	items3 := Unwrap[int]("incompatible")
+
+	if items3 != nil {
+		t.Error("expected nil for incompatible type")
+	}
+}
+
+func TestHasMany(t *testing.T) {
+	if !New(1, 2).HasMany() {
+		t.Error("expected true for 2+ items")
+	}
+
+	if New(1).HasMany() {
+		t.Error("expected false for single item")
+	}
+
+	if Empty[int]().HasMany() {
+		t.Error("expected false for empty")
+	}
+}
+
+func TestLen(t *testing.T) {
+	c := New(1, 2, 3)
+
+	if c.Len() != 3 {
+		t.Errorf("expected 3, got %d", c.Len())
+	}
+}
+
+func TestToBase(t *testing.T) {
+	c := New(1, 2, 3)
+
+	if c.ToBase() != c {
+		t.Error("expected same collection")
+	}
+}
+
+func TestIter(t *testing.T) {
+	c := New(10, 20, 30)
+	sum := 0
+
+	for item := range c.Iter() {
+		sum += item
+	}
+
+	if sum != 60 {
+		t.Errorf("expected 60, got %d", sum)
+	}
+}
+
+func TestPairIter(t *testing.T) {
+	c := New(10, 20, 30)
+	indexSum := 0
+	valueSum := 0
+
+	for idx, item := range c.PairIter() {
+		indexSum += idx
+		valueSum += item
+	}
+
+	if indexSum != 3 {
+		t.Errorf("expected index sum 3, got %d", indexSum)
+	}
+
+	if valueSum != 60 {
+		t.Errorf("expected value sum 60, got %d", valueSum)
+	}
+}
+
+func TestHasSole(t *testing.T) {
+	c := New(1, 2, 3)
+
+	if !c.HasSole(func(item int, _ int) bool { return item == 2 }) {
+		t.Error("expected true for single match")
+	}
+
+	if c.HasSole(func(item int, _ int) bool { return item > 1 }) {
+		t.Error("expected false for multiple matches")
+	}
+
+	if c.HasSole(func(item int, _ int) bool { return item > 10 }) {
+		t.Error("expected false for no matches")
+	}
+
+	single := New(42)
+
+	if !single.HasSole() {
+		t.Error("expected true for single-item collection without predicate")
+	}
+}
+
+func TestSomeCollection(t *testing.T) {
+	c := New(1, 2, 3)
+
+	if !c.Some(func(item int, _ int) bool { return item == 2 }) {
+		t.Error("expected true")
+	}
+
+	if c.Some(func(item int, _ int) bool { return item > 10 }) {
+		t.Error("expected false")
+	}
+}
+
+func TestHasAny(t *testing.T) {
+	c := New(10, 20, 30)
+
+	if !c.HasAny(0, 5) {
+		t.Error("expected true when at least one index valid")
+	}
+
+	if c.HasAny(5, 6, 7) {
+		t.Error("expected false when all indices invalid")
+	}
+}
+
+func TestUndot(t *testing.T) {
+	c := New(1, 2, 3)
+	c2 := c.Undot()
+
+	if !reflect.DeepEqual(c.All(), c2.All()) {
+		t.Error("expected shallow copy")
+	}
+
+	if c == c2 {
+		t.Error("expected different collection instance")
+	}
+}
+
+func TestMedianBy(t *testing.T) {
+	type item struct {
+		val float64
+	}
+	c := Collect([]item{{10}, {20}, {30}})
+	result := MedianBy(c, func(i item) float64 { return i.val })
+
+	if result != 20 {
+		t.Errorf("expected 20, got %f", result)
+	}
+}
+
+func TestAvgBy(t *testing.T) {
+	type item struct {
+		val int
+	}
+	c := Collect([]item{{10}, {20}, {30}})
+	result := AvgBy(c, func(i item) int { return i.val })
+
+	if result != 20 {
+		t.Errorf("expected 20, got %f", result)
+	}
+
+	empty := Empty[item]()
+	result = AvgBy(empty, func(i item) int { return i.val })
+
+	if result != 0 {
+		t.Errorf("expected 0 for empty, got %f", result)
+	}
+}
+
+func TestAverage(t *testing.T) {
+	c := New(10, 20, 30)
+
+	if Average(c) != 20 {
+		t.Errorf("expected 20, got %f", Average(c))
+	}
+}
+
+func TestAdd(t *testing.T) {
+	c := New(1, 2)
+	c.Add(3)
+
+	if c.Count() != 3 {
+		t.Errorf("expected 3, got %d", c.Count())
+	}
+
+	if c.All()[2] != 3 {
+		t.Errorf("expected 3 at index 2, got %d", c.All()[2])
+	}
+}
+
+func TestUnshift(t *testing.T) {
+	c := New(2, 3)
+	c.Unshift(1)
+	expected := []int{1, 2, 3}
+
+	if !reflect.DeepEqual(c.All(), expected) {
+		t.Errorf("expected %v, got %v", expected, c.All())
+	}
+}
+
+func TestMerge(t *testing.T) {
+	c := New(1, 2, 3)
+	result := c.Merge([]int{4, 5})
+
+	if result.Count() != 5 {
+		t.Errorf("expected 5, got %d", result.Count())
+	}
+}
+
+func TestMapToGroups(t *testing.T) {
+	type item struct {
+		cat   string
+		value int
+	}
+	c := Collect([]item{{"a", 1}, {"a", 2}, {"b", 3}})
+	groups := MapToGroups(c, func(i item) (string, int) {
+		return i.cat, i.value
+	})
+
+	if len(groups["a"]) != 2 {
+		t.Errorf("expected 2 in group 'a', got %d", len(groups["a"]))
+	}
+
+	if len(groups["b"]) != 1 {
+		t.Errorf("expected 1 in group 'b', got %d", len(groups["b"]))
+	}
+}
+
+func TestEachSpread(t *testing.T) {
+	c := New(1, 2, 3)
+	count := 0
+	c.EachSpread(func(item int, _ int) bool {
+		count++
+
+		return true
+	})
+
+	if count != 3 {
+		t.Errorf("expected 3, got %d", count)
+	}
+}
+
+func TestPipeInto(t *testing.T) {
+	c := New(1, 2, 3)
+	result := PipeInto(c, func(col *Collection[int]) int {
+		return col.Count()
+	})
+
+	if result != 3 {
+		t.Errorf("expected 3, got %d", result)
+	}
+}
+
+func TestUnlessEmpty(t *testing.T) {
+	c := New(1, 2)
+	result := c.UnlessEmpty(func(col *Collection[int]) *Collection[int] {
+		col.Push(3)
+
+		return col
+	})
+
+	if result.Count() != 3 {
+		t.Errorf("expected 3, got %d", result.Count())
+	}
+
+	empty := Empty[int]()
+	called := false
+	empty.UnlessEmpty(func(col *Collection[int]) *Collection[int] {
+		called = true
+
+		return col
+	})
+
+	if called {
+		t.Error("expected callback not called for empty collection")
+	}
+}
+
+func TestUnlessNotEmpty(t *testing.T) {
+	empty := Empty[int]()
+	result := empty.UnlessNotEmpty(func(col *Collection[int]) *Collection[int] {
+		return col.Push(1, 2, 3)
+	})
+
+	if result.Count() != 3 {
+		t.Errorf("expected 3, got %d", result.Count())
+	}
+
+	c := New(1, 2)
+	called := false
+	c.UnlessNotEmpty(func(col *Collection[int]) *Collection[int] {
+		called = true
+
+		return col
+	})
+
+	if called {
+		t.Error("expected callback not called for non-empty collection")
+	}
+}
+
+func TestToPrettyJSON(t *testing.T) {
+	c := New(1, 2, 3)
+	b, err := c.ToPrettyJSON()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := string(b)
+
+	if !strings.Contains(s, "\n") {
+		t.Error("expected pretty JSON with newlines")
+	}
+
+	if !strings.Contains(s, "    ") {
+		t.Error("expected 4-space indentation")
+	}
+}
+
+func TestFlatten(t *testing.T) {
+	c := New(1, 2, 3)
+	flat := c.Flatten()
+
+	if !reflect.DeepEqual(c.All(), flat.All()) {
+		t.Errorf("expected %v, got %v", c.All(), flat.All())
+	}
+
+	if c == flat {
+		t.Error("expected different collection instance")
+	}
+}
+
+func TestDump(t *testing.T) {
+	c := New(1, 2, 3)
+	result := c.Dump()
+
+	if result != c {
+		t.Error("expected Dump to return self")
+	}
+}
+
+func TestLastEmpty(t *testing.T) {
+	c := Empty[int]()
+
+	_, ok := c.Last()
+
+	if ok {
+		t.Error("expected false for empty collection")
+	}
+
+	_, ok = c.Last(func(item int, _ int) bool { return true })
+
+	if ok {
+		t.Error("expected false for empty collection with predicate")
+	}
+}
+
+func TestLastNoMatch(t *testing.T) {
+	c := New(1, 2, 3)
+
+	_, ok := c.Last(func(item int, _ int) bool { return item > 10 })
+
+	if ok {
+		t.Error("expected false when no match")
+	}
+}
+
+func TestPopEmpty(t *testing.T) {
+	c := Empty[int]()
+
+	_, ok := c.Pop()
+
+	if ok {
+		t.Error("expected false for empty collection")
+	}
+}
+
+func TestPopWithCount(t *testing.T) {
+	c := New(1, 2, 3, 4, 5)
+	item, ok := c.Pop(2)
+
+	if !ok {
+		t.Error("expected true")
+	}
+
+	if item != 5 {
+		t.Errorf("expected 5, got %d", item)
+	}
+}
+
+func TestPopManyExceedsLen(t *testing.T) {
+	c := New(1, 2, 3)
+	popped := c.PopMany(10)
+
+	if popped.Count() != 3 {
+		t.Errorf("expected 3 popped items, got %d", popped.Count())
+	}
+
+	if c.Count() != 0 {
+		t.Errorf("expected 0 remaining, got %d", c.Count())
+	}
+}
+
+func TestShiftEmpty(t *testing.T) {
+	c := Empty[int]()
+
+	_, ok := c.Shift()
+
+	if ok {
+		t.Error("expected false for empty collection")
+	}
+}
+
+func TestShiftManyExceedsLen(t *testing.T) {
+	c := New(1, 2, 3)
+	shifted := c.ShiftMany(10)
+
+	if shifted.Count() != 3 {
+		t.Errorf("expected 3 shifted items, got %d", shifted.Count())
+	}
+
+	if c.Count() != 0 {
+		t.Errorf("expected 0 remaining, got %d", c.Count())
+	}
+}
+
+func TestAvgEmpty(t *testing.T) {
+	c := Empty[int]()
+
+	if Avg(c) != 0 {
+		t.Errorf("expected 0 for empty, got %f", Avg(c))
+	}
+}
+
+func TestMinEmpty(t *testing.T) {
+	c := Empty[int]()
+
+	_, ok := Min(c)
+
+	if ok {
+		t.Error("expected false for empty collection")
+	}
+}
+
+func TestMaxEmpty(t *testing.T) {
+	c := Empty[int]()
+
+	_, ok := Max(c)
+
+	if ok {
+		t.Error("expected false for empty collection")
+	}
+}
+
+func TestWhenFalseWithDefault(t *testing.T) {
+	c := New(1, 2, 3)
+	result := c.When(false, func(col *Collection[int]) *Collection[int] {
+		col.Push(4)
+
+		return col
+	}, func(col *Collection[int]) *Collection[int] {
+		col.Push(99)
+
+		return col
+	})
+
+	if !reflect.DeepEqual(result.All(), []int{1, 2, 3, 99}) {
+		t.Errorf("expected default callback applied, got %v", result.All())
+	}
+}
+
+func TestNewNil(t *testing.T) {
+	c := New[int]()
+
+	if c.Count() != 0 {
+		t.Errorf("expected 0, got %d", c.Count())
+	}
+}
+
+func TestCollectNil(t *testing.T) {
+	c := Collect[int](nil)
+
+	if c.Count() != 0 {
+		t.Errorf("expected 0, got %d", c.Count())
+	}
+}
+
+func TestFlip(t *testing.T) {
+	c := New(1, 2, 3)
+	flipped := c.Flip()
+	expected := []int{3, 2, 1}
+
+	if !reflect.DeepEqual(flipped.All(), expected) {
+		t.Errorf("expected %v, got %v", expected, flipped.All())
+	}
+}
+
+func TestKeys(t *testing.T) {
+	c := New(10, 20, 30)
+	keys := c.Keys()
+	expected := []int{0, 1, 2}
+
+	if !reflect.DeepEqual(keys.All(), expected) {
+		t.Errorf("expected %v, got %v", expected, keys.All())
+	}
+}
+
+func TestWhereNot(t *testing.T) {
+	c := New(1, 2, 3, 4, 5)
+	result := c.WhereNot(func(item int) bool { return item > 3 })
+	expected := []int{1, 2, 3}
+
+	if !reflect.DeepEqual(result.All(), expected) {
+		t.Errorf("expected %v, got %v", expected, result.All())
+	}
+}
+
+func TestWhereNull(t *testing.T) {
+	c := New(0, 1, 0, 2, 0)
+	result := WhereNull(c, func(item int) int { return item })
+
+	if result.Count() != 3 {
+		t.Errorf("expected 3 zero values, got %d", result.Count())
+	}
+}
+
+func TestWhereNotNull(t *testing.T) {
+	c := New(0, 1, 0, 2, 0)
+	result := WhereNotNull(c, func(item int) int { return item })
+
+	if result.Count() != 2 {
+		t.Errorf("expected 2 non-zero values, got %d", result.Count())
+	}
+}
+
+func TestWhereIn(t *testing.T) {
+	c := New(1, 2, 3, 4, 5)
+	result := WhereIn(c, func(item int) int { return item }, []int{2, 4})
+	expected := []int{2, 4}
+
+	if !reflect.DeepEqual(result.All(), expected) {
+		t.Errorf("expected %v, got %v", expected, result.All())
+	}
+}
+
+func TestWhereNotIn(t *testing.T) {
+	c := New(1, 2, 3, 4, 5)
+	result := WhereNotIn(c, func(item int) int { return item }, []int{2, 4})
+	expected := []int{1, 3, 5}
+
+	if !reflect.DeepEqual(result.All(), expected) {
+		t.Errorf("expected %v, got %v", expected, result.All())
+	}
+}
+
+func TestWhereBetween(t *testing.T) {
+	c := New(1, 2, 3, 4, 5)
+	result := WhereBetween(c, func(item int) int { return item }, 2, 4)
+	expected := []int{2, 3, 4}
+
+	if !reflect.DeepEqual(result.All(), expected) {
+		t.Errorf("expected %v, got %v", expected, result.All())
+	}
+}
+
+func TestWhereNotBetween(t *testing.T) {
+	c := New(1, 2, 3, 4, 5)
+	result := WhereNotBetween(c, func(item int) int { return item }, 2, 4)
+	expected := []int{1, 5}
+
+	if !reflect.DeepEqual(result.All(), expected) {
+		t.Errorf("expected %v, got %v", expected, result.All())
+	}
+}
+
+func TestBeforeNoMatch(t *testing.T) {
+	c := New(1, 2, 3)
+
+	_, ok := c.Before(func(item int, _ int) bool { return item > 10 })
+
+	if ok {
+		t.Error("expected false when no match")
+	}
+}
+
+func TestBeforeFirstItem(t *testing.T) {
+	c := New(1, 2, 3)
+
+	_, ok := c.Before(func(item int, _ int) bool { return item == 1 })
+
+	if ok {
+		t.Error("expected false when match is first item")
+	}
+}
+
+func TestAfterNoMatch(t *testing.T) {
+	c := New(1, 2, 3)
+
+	_, ok := c.After(func(item int, _ int) bool { return item > 10 })
+
+	if ok {
+		t.Error("expected false when no match")
+	}
+}
+
+func TestAfterLastItem(t *testing.T) {
+	c := New(1, 2, 3)
+
+	_, ok := c.After(func(item int, _ int) bool { return item == 3 })
+
+	if ok {
+		t.Error("expected false when match is last item")
+	}
+}
+
+func TestSpliceNegativeOffset(t *testing.T) {
+	c := New(1, 2, 3, 4, 5)
+	removed := c.Splice(-2)
+
+	if removed.Count() != 2 {
+		t.Errorf("expected 2 removed, got %d", removed.Count())
+	}
+}
+
+func TestSpliceOutOfBounds(t *testing.T) {
+	c := New(1, 2, 3)
+	removed := c.Splice(10)
+
+	if !removed.IsEmpty() {
+		t.Error("expected empty result for out-of-bounds offset")
+	}
+}
+
+func TestSpliceReplaceNegativeOffset(t *testing.T) {
+	c := New(1, 2, 3, 4, 5)
+	removed := c.SpliceReplace(-2, 2, []int{8, 9})
+
+	if removed.Count() != 2 {
+		t.Errorf("expected 2 removed, got %d", removed.Count())
+	}
+}
+
+func TestWhenFuncFalseWithDefault(t *testing.T) {
+	result := WhenFunc(false, func() int {
+		return 42
+	}, func() int {
+		return 99
+	})
+
+	if result != 99 {
+		t.Errorf("expected 99, got %d", result)
+	}
+}
+
+func TestWhenFuncFalseNoDefault(t *testing.T) {
+	result := WhenFunc(false, func() int {
+		return 42
+	})
+
+	if result != 0 {
+		t.Errorf("expected 0, got %d", result)
+	}
+}
+
+func TestPullInvalid(t *testing.T) {
+	c := New(1, 2, 3)
+	_, ok := c.Pull(-1)
+
+	if ok {
+		t.Error("expected false for invalid index")
+	}
+}
+
+func TestForgetInvalid(t *testing.T) {
+	c := New(1, 2, 3)
+	result := c.Forget(-1)
+
+	if result.Count() != 3 {
+		t.Errorf("expected unchanged, got %d items", result.Count())
+	}
+}
+
+func TestZipUnevenLengths(t *testing.T) {
+	c := New(1, 2)
+	result := Zip(c, []int{10, 20, 30})
+
+	if result.Count() != 3 {
+		t.Errorf("expected 3, got %d", result.Count())
+	}
+}
+
+func TestTimesZero(t *testing.T) {
+	c := Times(0, func(i int) int { return i })
+
+	if !c.IsEmpty() {
+		t.Error("expected empty for 0 times")
+	}
+}
+
+func TestMultiplyZero(t *testing.T) {
+	c := New(1, 2, 3)
+	result := c.Multiply(0)
+
+	if !result.IsEmpty() {
+		t.Error("expected empty for multiply 0")
 	}
 }

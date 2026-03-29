@@ -43,6 +43,84 @@ func TestLast(t *testing.T) {
 	if !ok || v != 3 {
 		t.Errorf("expected 3, got %d", v)
 	}
+
+	_, ok = arr.Last([]int{})
+
+	if ok {
+		t.Error("expected false for empty slice")
+	}
+
+	_, ok = arr.Last(items, func(item int, _ int) bool { return item > 100 })
+
+	if ok {
+		t.Error("expected false when callback finds no match")
+	}
+}
+
+func TestGet(t *testing.T) {
+	items := []int{10, 20, 30}
+
+	v := arr.Get(items, 1)
+
+	if v != 20 {
+		t.Errorf("expected 20, got %d", v)
+	}
+
+	v = arr.Get(items, 10, 99)
+
+	if v != 99 {
+		t.Errorf("expected default 99, got %d", v)
+	}
+
+	v = arr.Get(items, 10)
+
+	if v != 0 {
+		t.Errorf("expected zero value 0, got %d", v)
+	}
+
+	v = arr.Get(items, -1)
+
+	if v != 0 {
+		t.Errorf("expected zero value for negative index, got %d", v)
+	}
+}
+
+func TestSole(t *testing.T) {
+	v, err := arr.Sole([]int{42})
+
+	if err != nil || v != 42 {
+		t.Errorf("expected 42, got %d, err: %v", v, err)
+	}
+
+	_, err = arr.Sole([]int{})
+
+	if err == nil {
+		t.Error("expected error for empty slice")
+	}
+
+	_, err = arr.Sole([]int{1, 2, 3})
+
+	if err == nil {
+		t.Error("expected error for multiple items")
+	}
+
+	v, err = arr.Sole([]int{1, 2, 3, 4, 5}, func(item int, _ int) bool { return item == 3 })
+
+	if err != nil || v != 3 {
+		t.Errorf("expected 3, got %d, err: %v", v, err)
+	}
+
+	_, err = arr.Sole([]int{1, 2, 3}, func(item int, _ int) bool { return item > 10 })
+
+	if err == nil {
+		t.Error("expected error when callback finds no match")
+	}
+
+	_, err = arr.Sole([]int{1, 2, 3}, func(item int, _ int) bool { return item > 1 })
+
+	if err == nil {
+		t.Error("expected error when callback finds multiple matches")
+	}
 }
 
 func TestTake(t *testing.T) {

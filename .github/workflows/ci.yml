@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run tests
+        run: go test ./... -coverprofile=coverage.out -covermode=atomic
+
+      - name: Validate coverage threshold
+        shell: bash
+        run: |
+          THRESHOLD=90
+          EXIT_CODE=0
+
+          while read -r line; do
+            pkg=$(echo "$line" | awk '{print $2}')
+            pct=$(echo "$line" | sed -n 's/.*coverage: \([0-9.]*\)%.*/\1/p')
+
+            if [ -z "$pct" ]; then
+              continue
+            fi
+
+            pass=$(echo "$pct >= $THRESHOLD" | bc -l)
+
+            if [ "$pass" -eq 1 ]; then
+              echo "OK:   $pkg ${pct}%"
+            else
+              echo "FAIL: $pkg ${pct}% (minimum: ${THRESHOLD}%)"
+              EXIT_CODE=1
+            fi
+          done < <(go test ./... -cover 2>&1)
+
+          exit $EXIT_CODE

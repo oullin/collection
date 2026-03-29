@@ -36,4 +36,16 @@ func TestJoin(t *testing.T) {
 	if result != "a, b and c" {
 		t.Errorf("expected 'a, b and c', got '%s'", result)
 	}
+
+	result = arr.Join([]string{}, ", ")
+
+	if result != "" {
+		t.Errorf("expected empty string, got '%s'", result)
+	}
+
+	result = arr.Join([]string{"solo"}, ", ")
+
+	if result != "solo" {
+		t.Errorf("expected 'solo', got '%s'", result)
+	}
 }
