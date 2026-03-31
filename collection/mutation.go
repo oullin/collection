@@ -68,9 +68,13 @@ func (c *Collection[T]) Pop(counts ...int) (T, bool) {
 	_ = count // For single pop
 	item := c.items[len(c.items)-1]
 
-	newItems := make([]T, len(c.items)-1)
-	copy(newItems, c.items[:len(c.items)-1])
-	c.items = newItems
+	// Zero the removed element so the GC can reclaim it — without this,
+	// the backing array keeps a stale reference and the value is never collected.
+	// Reslicing in-place avoids the O(N) alloc+copy that a new slice would require.
+	var zero T
+
+	c.items[len(c.items)-1] = zero
+	c.items = c.items[:len(c.items)-1]
 
 	return item, true
 }
@@ -90,9 +94,16 @@ func (c *Collection[T]) PopMany(count int) *Collection[T] {
 	copy(items, c.items[idx:])
 	popped := Collect(items)
 
-	remaining := make([]T, idx)
-	copy(remaining, c.items[:idx])
-	c.items = remaining
+	// Zero the removed tail so the GC can reclaim those elements — without this,
+	// the backing array keeps stale references that are never collected.
+	// Reslicing in-place avoids the O(N) alloc+copy that a new slice would require.
+	var zero T
+
+	for i := idx; i < len(c.items); i++ {
+		c.items[i] = zero
+	}
+
+	c.items = c.items[:idx]
 
 	return popped
 }
@@ -108,9 +119,13 @@ func (c *Collection[T]) Shift() (T, bool) {
 
 	item := c.items[0]
 
-	newItems := make([]T, len(c.items)-1)
-	copy(newItems, c.items[1:])
-	c.items = newItems
+	// Zero the removed element so the GC can reclaim it — without this,
+	// the backing array keeps a stale reference and the value is never collected.
+	// Reslicing in-place avoids the O(N) alloc+copy that a new slice would require.
+	var zero T
+
+	c.items[0] = zero
+	c.items = c.items[1:]
 
 	return item, true
 }
@@ -128,9 +143,16 @@ func (c *Collection[T]) ShiftMany(count int) *Collection[T] {
 	copy(items, c.items[:count])
 	shifted := Collect(items)
 
-	remaining := make([]T, len(c.items)-count)
-	copy(remaining, c.items[count:])
-	c.items = remaining
+	// Zero the removed head so the GC can reclaim those elements — without this,
+	// the backing array keeps stale references that are never collected.
+	// Reslicing in-place avoids the O(N) alloc+copy that a new slice would require.
+	var zero T
+
+	for i := 0; i < count; i++ {
+		c.items[i] = zero
+	}
+
+	c.items = c.items[count:]
 
 	return shifted
 }
