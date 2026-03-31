@@ -19,6 +19,12 @@ jobs:
       - name: Run tests
         run: go test ./... -coverprofile=coverage.out -covermode=atomic
 
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.out
+          fail_ci_if_error: false
+
       - name: Validate coverage threshold
         shell: bash
         run: |

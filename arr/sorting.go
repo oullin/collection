@@ -63,5 +63,8 @@ func Random[T any](items []T, counts ...int) []T {
 		return shuffled
 	}
 
-	return shuffled[:count]
+	result := make([]T, count)
+	copy(result, shuffled[:count])
+
+	return result
 }

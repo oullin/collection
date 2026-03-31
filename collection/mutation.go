@@ -67,7 +67,10 @@ func (c *Collection[T]) Pop(counts ...int) (T, bool) {
 
 	_ = count // For single pop
 	item := c.items[len(c.items)-1]
-	c.items = c.items[:len(c.items)-1]
+
+	newItems := make([]T, len(c.items)-1)
+	copy(newItems, c.items[:len(c.items)-1])
+	c.items = newItems
 
 	return item, true
 }
@@ -82,8 +85,14 @@ func (c *Collection[T]) PopMany(count int) *Collection[T] {
 	}
 
 	idx := len(c.items) - count
-	popped := Collect(c.items[idx:])
-	c.items = c.items[:idx]
+
+	items := make([]T, count)
+	copy(items, c.items[idx:])
+	popped := Collect(items)
+
+	remaining := make([]T, idx)
+	copy(remaining, c.items[:idx])
+	c.items = remaining
 
 	return popped
 }
@@ -98,7 +107,10 @@ func (c *Collection[T]) Shift() (T, bool) {
 	}
 
 	item := c.items[0]
-	c.items = c.items[1:]
+
+	newItems := make([]T, len(c.items)-1)
+	copy(newItems, c.items[1:])
+	c.items = newItems
 
 	return item, true
 }
@@ -112,8 +124,13 @@ func (c *Collection[T]) ShiftMany(count int) *Collection[T] {
 		return shifted
 	}
 
-	shifted := Collect(c.items[:count])
-	c.items = c.items[count:]
+	items := make([]T, count)
+	copy(items, c.items[:count])
+	shifted := Collect(items)
+
+	remaining := make([]T, len(c.items)-count)
+	copy(remaining, c.items[count:])
+	c.items = remaining
 
 	return shifted
 }
