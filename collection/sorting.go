@@ -22,6 +22,7 @@ func (c *Collection[T]) Sort(less func(a, b T) bool) *Collection[T] {
 func SortBy[T any, K cmp.Ordered](c *Collection[T], keyFunc func(T) K) *Collection[T] {
 	result := make([]T, len(c.items))
 	copy(result, c.items)
+
 	sort.SliceStable(result, func(i, j int) bool {
 		return keyFunc(result[i]) < keyFunc(result[j])
 	})
@@ -33,6 +34,7 @@ func SortBy[T any, K cmp.Ordered](c *Collection[T], keyFunc func(T) K) *Collecti
 func SortByDesc[T any, K cmp.Ordered](c *Collection[T], keyFunc func(T) K) *Collection[T] {
 	result := make([]T, len(c.items))
 	copy(result, c.items)
+
 	sort.SliceStable(result, func(i, j int) bool {
 		return keyFunc(result[i]) > keyFunc(result[j])
 	})
@@ -51,6 +53,7 @@ func (c *Collection[T]) SortDesc(less func(a, b T) bool) *Collection[T] {
 func (c *Collection[T]) Shuffle() *Collection[T] {
 	result := make([]T, len(c.items))
 	copy(result, c.items)
+
 	rand.Shuffle(len(result), func(i, j int) {
 		result[i], result[j] = result[j], result[i]
 	})

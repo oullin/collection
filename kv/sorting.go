@@ -13,6 +13,7 @@ func Sort(items map[string]any) map[string]any {
 	}
 
 	sort.Strings(keys)
+
 	result := make(map[string]any, len(items))
 
 	for _, k := range keys {

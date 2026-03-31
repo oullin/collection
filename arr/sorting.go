@@ -10,6 +10,7 @@ import (
 func Sort[T any](items []T, less func(a, b T) bool) []T {
 	result := make([]T, len(items))
 	copy(result, items)
+
 	sort.SliceStable(result, func(i, j int) bool {
 		return less(result[i], result[j])
 	})
@@ -39,6 +40,7 @@ func SortRecursiveDesc[T any](items []T, less func(a, b T) bool) []T {
 func Shuffle[T any](items []T) []T {
 	result := make([]T, len(items))
 	copy(result, items)
+
 	rand.Shuffle(len(result), func(i, j int) {
 		result[i], result[j] = result[j], result[i]
 	})

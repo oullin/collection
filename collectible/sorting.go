@@ -13,6 +13,7 @@ func SortKeys[V any](m *Collection[string, V]) *Collection[string, V] {
 
 	newKeys := make([]string, len(m.keys))
 	copy(newKeys, m.keys)
+
 	sort.Strings(newKeys)
 
 	return &Collection[string, V]{items: result, keys: newKeys}
@@ -29,6 +30,7 @@ func SortKeysDesc[V any](m *Collection[string, V]) *Collection[string, V] {
 
 	newKeys := make([]string, len(m.keys))
 	copy(newKeys, m.keys)
+
 	sort.Sort(sort.Reverse(sort.StringSlice(newKeys)))
 
 	return &Collection[string, V]{items: result, keys: newKeys}
@@ -45,6 +47,7 @@ func (m *Collection[K, V]) SortKeysUsing(less func(K, K) bool) *Collection[K, V]
 
 	newKeys := make([]K, len(m.keys))
 	copy(newKeys, m.keys)
+
 	sort.SliceStable(newKeys, func(i, j int) bool {
 		return less(newKeys[i], newKeys[j])
 	})

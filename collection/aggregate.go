@@ -15,7 +15,9 @@ func Median(c *Collection[float64]) float64 {
 
 	sorted := make([]float64, len(c.items))
 	copy(sorted, c.items)
+
 	slices.Sort(sorted)
+
 	mid := len(sorted) / 2
 
 	if len(sorted)%2 == 0 {

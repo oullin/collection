@@ -1414,7 +1414,9 @@ func TestSplitIn(t *testing.T) {
 func TestModeTie(t *testing.T) {
 	c := New(1, 1, 2, 2, 3)
 	result := Mode(c)
+
 	sort.Ints(result)
+
 	expected := []int{1, 2}
 
 	if !reflect.DeepEqual(result, expected) {
@@ -1620,6 +1622,7 @@ func TestMedianBy(t *testing.T) {
 	type item struct {
 		val float64
 	}
+
 	c := Collect([]item{{10}, {20}, {30}})
 	result := MedianBy(c, func(i item) float64 { return i.val })
 
@@ -1632,6 +1635,7 @@ func TestAvgBy(t *testing.T) {
 	type item struct {
 		val int
 	}
+
 	c := Collect([]item{{10}, {20}, {30}})
 	result := AvgBy(c, func(i item) int { return i.val })
 
@@ -1692,6 +1696,7 @@ func TestMapToGroups(t *testing.T) {
 		cat   string
 		value int
 	}
+
 	c := Collect([]item{{"a", 1}, {"a", 2}, {"b", 3}})
 	groups := MapToGroups(c, func(i item) (string, int) {
 		return i.cat, i.value
