@@ -1,0 +1,9 @@
+services:
+    go-fmt:
+        image: ghcr.io/oullin/go-fmt:v0.0.14
+        working_dir: /work
+        volumes:
+            - .:/work
+        environment:
+            HOST_PROJECT_PATH: ${PWD}
+        command: ['help']

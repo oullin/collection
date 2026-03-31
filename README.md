@@ -1,24 +1,30 @@
 # Collection
 
-A Go port of Laravel's [Illuminate Collections](https://laravel.com/docs/collections) -- fluent, type-safe generic collections powered by Go generics.
+[![Go Reference](https://pkg.go.dev/badge/github.com/gocanto/collection.svg)](https://pkg.go.dev/github.com/gocanto/collection)
+[![Go Version](https://img.shields.io/badge/go-1.25-blue.svg)](https://golang.org/doc/devel/release.html#go1.25)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A powerful Go port of [Laravel Collections](https://laravel.com/docs/collections) — fluent, type-safe, and powered by Go generics and `iter.Seq` lazy evaluation.
 
 ```bash
 go get github.com/gocanto/collection
 ```
 
-Requires **Go 1.25** or later.
+---
 
-## Overview
+## ⚡️ Why use this?
 
-This library is a port of Laravel's [Illuminate\Support\Collection](https://github.com/laravel/framework/tree/master/src/Illuminate/Collections) to Go. It preserves the same rich API surface -- `filter`, `map`, `reduce`, `flatMap`, `chunk`, `partition`, and many more -- while redesigning everything idiomatically for Go with generics, `iter.Seq` for lazy evaluation, and full type safety.
+Go's slices and maps are powerful but often lead to repetitive boilerplate loops for common operations. `collection` provides a **fluent, expressive API** to handle data transformations with ease:
 
-- **Readable data pipelines** -- chain `.Filter().Map().Take()` instead of nesting loops.
-- **Type-safe generics** -- no `interface{}` casting; the compiler catches type errors at build time.
-- **Immutable returns** -- methods return new collections, leaving the original untouched.
-- **Lazy evaluation** -- process large or infinite datasets without allocating the entire result up front.
-- **Standalone utilities** -- use individual functions from `arr` or `kv` without constructing a collection object.
+- **💎 Fluent Pipelines:** Chain `.Filter().Take().Each()` instead of nesting `for` loops.
+- **🛡️ Type-Safe:** Built with Go generics—no `interface{}` casting or runtime type errors.
+- **♻️ Immutable by Default:** Transformation methods return new collections, preserving your original data.
+- **🐢 Lazy Evaluation:** Process massive datasets efficiently using `iter.Seq` sequences.
+- **🧩 Modular:** Use the full fluent API or lightweight standalone utilities (`arr` and `kv`).
 
-## Quick Start
+---
+
+## 🚀 Quick Start
 
 ```go
 package main
@@ -29,36 +35,51 @@ import (
 )
 
 func main() {
+    // 1. Create a collection from a slice
     numbers := collection.Collect([]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
 
-    result := numbers.
-        Filter(func(n int, _ int) bool { return n%2 == 0 }).
+    // 2. Chain operations fluently
+    even := numbers.
+        Filter(func(n int, _ int) bool { return n % 2 == 0 }).
         Take(3)
 
-    fmt.Println(result.All()) // [2, 4, 6]
+    // 3. Transform types using top-level generics
+    // (Go doesn't allow methods to introduce new type parameters)
+    result := collection.Map(even, func(n int, _ int) string {
+        return fmt.Sprintf("Number: %d", n)
+    })
+
+    fmt.Println(result.All()) // ["Number: 2", "Number: 4", "Number: 6"]
 }
 ```
 
-## Packages
+---
 
-| Package | Description |
-|---------|-------------|
-| `collection` | Core collection types: `Collection[T]`, `MapCollection[K,V]`, `LazyCollection[T]`, and helper functions. |
-| `collection/arr` | Standalone generic slice utilities: `Flatten`, `Sort`, `Where`, `Map`, `Pluck`, `Partition`, etc. |
-| `collection/kv` | Map utilities with dot-notation support: `Get`, `Set`, `Has`, `Dot`, `Undot`, `Only`, `Query`, etc. |
+## 📦 Package Ecosystem
 
-## Documentation
+| Package | Purpose | Use when... |
+|:---|:---|:---|
+| **`collection`** | **The Core** | You want the full fluent `Collection[T]` experience for slices. |
+| **`lazy`** | **Lazy Sequences** | You're handling large/infinite streams and want deferred execution. |
+| **`collectible`** | **Key-Value Maps** | You need an ordered `collectible.Collection[K, V]` with a fluent API. |
+| **`arr`** | **Slice Utils** | You need a quick one-off helper (e.g., `Sort`, `Flatten`) on a raw `[]T`. |
+| **`kv`** | **Map Utils** | You need dot-notation access (`"user.profile.name"`) for `map[string]any`. |
 
-Full API documentation is available in the [docs](docs/) directory:
+---
 
-- [Overview](docs/overview.md) -- Architecture, design decisions, and usage guide.
-- [Collection](docs/collection.md) -- `Collection[T]` API reference.
-- [MapCollection](docs/map_collection.md) -- `MapCollection[K,V]` API reference.
-- [LazyCollection](docs/lazy_collection.md) -- `LazyCollection[T]` API reference.
-- [arr](docs/arr.md) -- Slice utilities API reference.
-- [kv](docs/kv.md) -- Map utilities API reference.
-- [Helpers](docs/helpers.md) -- Root-package helper functions.
+## 📖 Deep Dive
 
-## License
+Explore our comprehensive documentation for each component:
 
-MIT -- see [LICENSE](LICENSE) for details.
+- [**Architecture Overview**](docs/overview.md) — Design philosophy and core concepts.
+- [**Collection API**](docs/collection.md) — Reference for the standard fluent collection.
+- [**Collectible API**](docs/collectible.md) — Reference for key-value collection operations.
+- [**Lazy API**](docs/lazy.md) — Reference for lazy sequences and `iter.Seq`.
+- [**Array Utilities (`arr`)**](docs/arr.md) — Standalone functions for raw slices.
+- [**Key-Value Utilities (`kv`)**](docs/kv.md) — Standalone functions for maps and dot-notation.
+
+---
+
+## ⚖️ License
+
+Released under the [MIT License](LICENSE).

@@ -15,8 +15,10 @@ func ValueFunc[T any](callback func() T) T {
 func Head[T any](items []T) (T, bool) {
 	if len(items) == 0 {
 		var zero T
+
 		return zero, false
 	}
+
 	return items[0], true
 }
 
@@ -25,8 +27,10 @@ func Head[T any](items []T) (T, bool) {
 func Last[T any](items []T) (T, bool) {
 	if len(items) == 0 {
 		var zero T
+
 		return zero, false
 	}
+
 	return items[len(items)-1], true
 }
 
@@ -36,10 +40,13 @@ func WhenValue[T any](condition bool, value T, defaults ...T) T {
 	if condition {
 		return value
 	}
+
 	if len(defaults) > 0 {
 		return defaults[0]
 	}
+
 	var zero T
+
 	return zero
 }
 
@@ -49,9 +56,12 @@ func WhenFunc[T any](condition bool, callback func() T, defaults ...func() T) T 
 	if condition {
 		return callback()
 	}
+
 	if len(defaults) > 0 {
 		return defaults[0]()
 	}
+
 	var zero T
+
 	return zero
 }
