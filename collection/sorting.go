@@ -75,5 +75,8 @@ func (c *Collection[T]) Random(counts ...int) *Collection[T] {
 		return shuffled
 	}
 
-	return Collect(shuffled.items[:count])
+	result := make([]T, count)
+	copy(result, shuffled.items[:count])
+
+	return Collect(result)
 }
